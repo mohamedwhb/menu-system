@@ -1,13 +1,12 @@
 import {
-  BarChart3,
-  CalendarDays,
-  ClipboardList,
-  CreditCard,
-  Home,
-  LayoutGrid,
+  LayoutDashboard,
+  Menu,
   QrCode,
+  CalendarClock,
+  ShoppingCart,
+  Map,
   Settings,
-  ShieldCheck,
+  AlertTriangle,
   Users,
 } from "lucide-react"
 
@@ -15,27 +14,17 @@ export const sidebarItems = [
   {
     title: "Dashboard",
     href: "/dashboard",
-    icon: Home,
-  },
-  {
-    title: "Bestellungen",
-    href: "/dashboard/orders",
-    icon: ClipboardList,
+    icon: LayoutDashboard,
   },
   {
     title: "Speisekarte",
     href: "/dashboard/menu",
-    icon: CreditCard,
+    icon: Menu,
   },
   {
-    title: "Reservierungen",
-    href: "/dashboard/reservations",
-    icon: CalendarDays,
-  },
-  {
-    title: "Tischplan",
-    href: "/dashboard/floor-plan",
-    icon: LayoutGrid,
+    title: "Allergene",
+    href: "/dashboard/allergens",
+    icon: AlertTriangle,
   },
   {
     title: "QR-Codes",
@@ -43,18 +32,23 @@ export const sidebarItems = [
     icon: QrCode,
   },
   {
-    title: "Tischverifizierung",
+    title: "Reservierungen",
+    href: "/dashboard/reservations",
+    icon: CalendarClock,
+  },
+  {
+    title: "Bestellungen",
+    href: "/dashboard/orders",
+    icon: ShoppingCart,
+  },
+  {
+    title: "Tischplan",
+    href: "/dashboard/floor-plan",
+    icon: Map,
+  },
+  {
+    title: "Verifizierungscodes",
     href: "/dashboard/verification-codes",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Statistiken",
-    href: "/dashboard/statistics",
-    icon: BarChart3,
-  },
-  {
-    title: "Mitarbeiter",
-    href: "/dashboard/staff",
     icon: Users,
   },
   {

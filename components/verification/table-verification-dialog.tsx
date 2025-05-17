@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Check, QrCode, RefreshCw, X } from "lucide-react"
+import { Check, RefreshCw, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ export function TableVerificationDialog({ tableId, isOpen, onClose, onVerify }: 
   const [verificationCode, setVerificationCode] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [verificationError, setVerificationError] = useState<string | null>(null)
-  const [verificationMethod, setVerificationMethod] = useState<"code" | "qr" | "location" | "bypass">("code")
+  const [verificationMethod, setVerificationMethod] = useState<"code" | "location">("code")
   const [locationStatus, setLocationStatus] = useState<"idle" | "checking" | "success" | "error">("idle")
   const [showDebugInfo, setShowDebugInfo] = useState(false)
 
@@ -70,17 +70,6 @@ export function TableVerificationDialog({ tableId, isOpen, onClose, onVerify }: 
     }, 1000)
   }
 
-  const handleVerifyQR = () => {
-    setIsVerifying(true)
-    setVerificationError(null)
-
-    // Simulate QR scanning
-    setTimeout(() => {
-      // Always succeed for demo purposes
-      onVerify(true)
-    }, 1500)
-  }
-
   const handleVerifyLocation = () => {
     setLocationStatus("checking")
     setVerificationError(null)
@@ -93,11 +82,6 @@ export function TableVerificationDialog({ tableId, isOpen, onClose, onVerify }: 
         onVerify(true)
       }, 1000)
     }, 2000)
-  }
-
-  const handleBypassVerification = () => {
-    // Immediately verify without checks (for testing)
-    onVerify(true)
   }
 
   // For debugging purposes
@@ -119,11 +103,9 @@ export function TableVerificationDialog({ tableId, isOpen, onClose, onVerify }: 
           value={verificationMethod}
           onValueChange={(v) => setVerificationMethod(v as any)}
         >
-          <TabsList className="grid grid-cols-4 mb-4">
+          <TabsList className="grid grid-cols-2 mb-4">
             <TabsTrigger value="code">Tischcode</TabsTrigger>
-            <TabsTrigger value="qr">QR-Code</TabsTrigger>
             <TabsTrigger value="location">Standort</TabsTrigger>
-            <TabsTrigger value="bypass">Test</TabsTrigger>
           </TabsList>
 
           <TabsContent value="code" className="space-y-4">
@@ -179,25 +161,6 @@ export function TableVerificationDialog({ tableId, isOpen, onClose, onVerify }: 
             </div>
           </TabsContent>
 
-          <TabsContent value="qr" className="space-y-4">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="border rounded-lg p-4 w-full aspect-square flex flex-col items-center justify-center bg-muted/50">
-                <QrCode className="h-16 w-16 mb-4 text-muted-foreground" />
-                <p className="text-sm text-center text-muted-foreground">
-                  Scannen Sie den Verifizierungs-QR-Code auf Ihrem Tisch
-                </p>
-              </div>
-              <Button onClick={handleVerifyQR} disabled={isVerifying} className="w-full">
-                {isVerifying ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <QrCode className="h-4 w-4 mr-2" />
-                )}
-                QR-Code scannen
-              </Button>
-            </div>
-          </TabsContent>
-
           <TabsContent value="location" className="space-y-4">
             <div className="flex flex-col items-center justify-center space-y-4">
               <div
@@ -237,21 +200,6 @@ export function TableVerificationDialog({ tableId, isOpen, onClose, onVerify }: 
                   </svg>
                 )}
                 Standort verifizieren
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="bypass" className="space-y-4">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="border rounded-lg p-4 w-full flex flex-col items-center justify-center bg-muted/50">
-                <p className="text-sm text-center text-muted-foreground mb-2">Testmodus: Verifizierung überspringen</p>
-                <p className="text-xs text-center text-muted-foreground">
-                  Diese Option ist nur für Testzwecke gedacht und sollte in einer Produktionsumgebung nicht verfügbar
-                  sein.
-                </p>
-              </div>
-              <Button onClick={handleBypassVerification} className="w-full bg-amber-500 hover:bg-amber-600">
-                Verifizierung überspringen
               </Button>
             </div>
           </TabsContent>

@@ -17,15 +17,19 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import type { menuItems } from "@/data/menu-items"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useMenu, type MenuItem } from "@/contexts/menu-context"
+import { Badge } from "@/components/ui/badge"
+import { X } from "lucide-react"
 
 interface EditMenuItemDialogProps {
-  item: (typeof menuItems)[0]
+  item: MenuItem
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function EditMenuItemDialog({ item, open, onOpenChange }: EditMenuItemDialogProps) {
+  const { updateMenuItem, allergens, categories } = useMenu()
   const [name, setName] = useState(item.name)
   const [description, setDescription] = useState(item.description || "")
   const [price, setPrice] = useState(item.price.toString())
@@ -34,7 +38,10 @@ export function EditMenuItemDialog({ item, open, onOpenChange }: EditMenuItemDia
   const [isVegan, setIsVegan] = useState(item.vegan || false)
   const [isGlutenFree, setIsGlutenFree] = useState(item.glutenFree || false)
   const [isFeatured, setIsFeatured] = useState(item.featured || false)
-  const [isAvailable, setIsAvailable] = useState(item.available || true)
+  const [isAvailable, setIsAvailable] = useState(item.available !== false) // Default to true if undefined
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>(item.allergens || [])
+  const [ingredients, setIngredients] = useState<string[]>(item.ingredients || [])
+  const [newIngredient, setNewIngredient] = useState("")
 
   // Update form when item changes
   useEffect(() => {
@@ -46,30 +53,57 @@ export function EditMenuItemDialog({ item, open, onOpenChange }: EditMenuItemDia
     setIsVegan(item.vegan || false)
     setIsGlutenFree(item.glutenFree || false)
     setIsFeatured(item.featured || false)
-    setIsAvailable(item.available || true)
+    setIsAvailable(item.available !== false)
+    setSelectedAllergens(item.allergens || [])
+    setIngredients(item.ingredients || [])
   }, [item])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log({
-      id: item.id,
+
+    // Update the menu item
+    updateMenuItem(item.id, {
       name,
       description,
       price: Number.parseFloat(price),
-      category,
+      category: category || "uncategorized",
       vegetarian: isVegetarian,
       vegan: isVegan,
       glutenFree: isGlutenFree,
       featured: isFeatured,
       available: isAvailable,
+      allergens: selectedAllergens.length > 0 ? selectedAllergens : undefined,
+      ingredients: ingredients.length > 0 ? ingredients : undefined,
     })
+
     onOpenChange(false)
   }
 
+  const toggleAllergen = (allergenId: string) => {
+    setSelectedAllergens((prev) =>
+      prev.includes(allergenId) ? prev.filter((id) => id !== allergenId) : [...prev, allergenId],
+    )
+  }
+
+  const addIngredient = () => {
+    if (newIngredient.trim() && !ingredients.includes(newIngredient.trim())) {
+      setIngredients((prev) => [...prev, newIngredient.trim()])
+      setNewIngredient("")
+    }
+  }
+
+  const removeIngredient = (ingredient: string) => {
+    setIngredients((prev) => prev.filter((item) => item !== ingredient))
+  }
+
+  // Filtere aktive Kategorien und sortiere sie nach Reihenfolge
+  const activeCategories = categories
+    .filter((cat) => cat.active && cat.id !== "all" && cat.id !== "uncategorized")
+    .sort((a, b) => a.order - b.order)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-white">
+      <DialogContent className="sm:max-w-[500px] bg-white max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Gericht bearbeiten</DialogTitle>
@@ -114,10 +148,12 @@ export function EditMenuItemDialog({ item, open, onOpenChange }: EditMenuItemDia
                     <SelectValue placeholder="Kategorie auswählen" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="starters">Vorspeisen</SelectItem>
-                    <SelectItem value="mains">Hauptgerichte</SelectItem>
-                    <SelectItem value="desserts">Desserts</SelectItem>
-                    <SelectItem value="drinks">Getränke</SelectItem>
+                    {activeCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="uncategorized">Nicht kategorisiert</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -180,6 +216,65 @@ export function EditMenuItemDialog({ item, open, onOpenChange }: EditMenuItemDia
                   Verfügbar
                 </Label>
                 <Switch id="edit-available" checked={isAvailable} onCheckedChange={setIsAvailable} />
+              </div>
+            </div>
+
+            {/* Allergene */}
+            <div className="grid gap-2">
+              <Label>Allergene</Label>
+              <div className="border rounded-md p-3 space-y-2">
+                {allergens.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keine Allergene verfügbar</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {allergens.map((allergen) => (
+                      <div key={allergen.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-allergen-${allergen.id}`}
+                          checked={selectedAllergens.includes(allergen.id)}
+                          onCheckedChange={() => toggleAllergen(allergen.id)}
+                        />
+                        <Label htmlFor={`edit-allergen-${allergen.id}`} className="cursor-pointer text-sm">
+                          {allergen.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Inhaltsstoffe */}
+            <div className="grid gap-2">
+              <Label>Inhaltsstoffe</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newIngredient}
+                  onChange={(e) => setNewIngredient(e.target.value)}
+                  placeholder="Neuer Inhaltsstoff"
+                  className="flex-1"
+                />
+                <Button type="button" onClick={addIngredient} variant="outline">
+                  Hinzufügen
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {ingredients.map((ingredient) => (
+                  <Badge key={ingredient} variant="secondary" className="flex items-center gap-1">
+                    {ingredient}
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(ingredient)}
+                      className="ml-1 rounded-full hover:bg-muted p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Entfernen</span>
+                    </button>
+                  </Badge>
+                ))}
+                {ingredients.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Keine Inhaltsstoffe hinzugefügt</p>
+                )}
               </div>
             </div>
           </div>

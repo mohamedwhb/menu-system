@@ -65,7 +65,7 @@ interface CartContextType {
   getGuestIds: () => string[]
   getGuestName: (guestId: string) => string
   getItemsByGuest: (guestId: string, status?: ItemStatus) => CartItem[]
-  setSplitMethod: (method: SplitMethod) => void
+  setSplitMethod: (method: "items" | "equal") => void
   updateGuestPercentage: (guestId: string, percentage: number) => void
   distributeRemaining: () => void
   resetSplits: () => void
@@ -76,6 +76,13 @@ interface CartContextType {
   setTipOption: (option: TipOption) => void
   setCustomTipAmount: (amount: number) => void
   getTotalWithTip: () => number
+  isProcessingPayment: boolean
+  paymentError: string | null
+  paymentSuccess: boolean
+  initiatePayment: (items?: CartItem[]) => Promise<boolean>
+  completePayment: (paymentDetails?: any) => void
+  cancelPayment: () => void
+  getItemsForPayment: () => CartItem[]
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -87,10 +94,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [specialInstructions, setSpecialInstructions] = useState("")
   const [tableId, setTableId] = useState<string | null>(null)
   const [tableVerified, setTableVerified] = useState(false)
-  const [splitMethod, setSplitMethod] = useState<SplitMethod>("items")
+  const [splitMethod, setSplitMethod] = useState<"items" | "equal">("items")
   const [guestSplits, setGuestSplits] = useState<GuestSplit[]>([])
   const [tipOption, setTipOption] = useState<TipOption>(0)
   const [customTipAmount, setCustomTipAmount] = useState(0)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
 
   // Count items by status
   const itemCount = items.filter((item) => item.status === "cart").reduce((total, item) => total + item.quantity, 0)
@@ -278,7 +288,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
 
     // Open cart drawer when adding items
-    setIsOpen(true)
+    // setIsOpen(true)
   }
 
   const removeItem = (id: string, guestId?: string, status: ItemStatus = "cart") => {
@@ -512,6 +522,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
+  // Funktion zum Initiieren des Bezahlvorgangs
+  const initiatePayment = async (itemsToPayFor?: CartItem[]): Promise<boolean> => {
+    // Setzen Sie den Zahlungsstatus zurück
+    setPaymentError(null)
+    setPaymentSuccess(false)
+    setIsProcessingPayment(true)
+
+    try {
+      // Hier würde in einer echten Anwendung die Kommunikation mit einem Zahlungsdienstleister stattfinden
+      // Für dieses Beispiel simulieren wir eine erfolgreiche Zahlung nach einer kurzen Verzögerung
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Simulieren Sie eine erfolgreiche Zahlung
+      setPaymentSuccess(true)
+      setIsProcessingPayment(false)
+      return true
+    } catch (error) {
+      // Bei einem Fehler setzen wir die entsprechenden Zustandsvariablen
+      setPaymentError(error instanceof Error ? error.message : "Ein unbekannter Fehler ist aufgetreten")
+      setIsProcessingPayment(false)
+      return false
+    }
+  }
+
+  // Funktion zum Abschließen des Bezahlvorgangs
+  const completePayment = (paymentDetails?: any) => {
+    // Markieren Sie alle Artikel in der Küche als bezahlt
+    markItemsAsPaid()
+
+    // Setzen Sie den Zahlungsstatus zurück
+    setPaymentSuccess(true)
+    setIsProcessingPayment(false)
+
+    // Optional: Speichern Sie Zahlungsdetails oder führen Sie andere Aktionen durch
+    console.log("Zahlung abgeschlossen mit Details:", paymentDetails)
+  }
+
+  // Funktion zum Abbrechen des Bezahlvorgangs
+  const cancelPayment = () => {
+    setIsProcessingPayment(false)
+    setPaymentError(null)
+    setPaymentSuccess(false)
+  }
+
+  // Funktion zum Abrufen aller Artikel, die bezahlt werden sollen
+  const getItemsForPayment = () => {
+    return items.filter((item) => item.status === "kitchen")
+  }
+
   return (
     <CartContext.Provider
       value={{
@@ -560,6 +619,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setTipOption,
         setCustomTipAmount,
         getTotalWithTip,
+        isProcessingPayment,
+        paymentError,
+        paymentSuccess,
+        initiatePayment,
+        completePayment,
+        cancelPayment,
+        getItemsForPayment,
       }}
     >
       {children}

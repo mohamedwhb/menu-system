@@ -2,13 +2,16 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { ShoppingCart } from "lucide-react"
+import { ShoppingCart, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
+import { useMenu } from "@/contexts/menu-context"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { TableVerificationDialog } from "@/components/verification/table-verification-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface MenuItemProps {
   id: string
@@ -19,11 +22,26 @@ interface MenuItemProps {
   tags?: string[]
   isVegetarian?: boolean
   isNew?: boolean
+  allergens?: string[]
+  ingredients?: string[]
 }
 
-export function MenuItem({ id, name, description, price, imageUrl, tags, isVegetarian, isNew }: MenuItemProps) {
+export function MenuItem({
+  id,
+  name,
+  description,
+  price,
+  imageUrl,
+  tags,
+  isVegetarian,
+  isNew,
+  allergens,
+  ingredients,
+}: MenuItemProps) {
   const { addItem, tableId, tableVerified, setTableVerified } = useCart()
+  const { allergens: allAllergens } = useMenu()
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
 
   const handleAddToCart = () => {
     // If table is selected but not verified, show verification dialog
@@ -48,6 +66,10 @@ export function MenuItem({ id, name, description, price, imageUrl, tags, isVeget
     })
   }
 
+  // Filtere die Allergene für dieses Menüelement
+  const itemAllergens =
+    allergens && allergens.length > 0 ? allAllergens.filter((allergen) => allergens.includes(allergen.id)) : []
+
   return (
     <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow">
       {/* Image */}
@@ -66,12 +88,32 @@ export function MenuItem({ id, name, description, price, imageUrl, tags, isVeget
       {/* Content */}
       <div className="flex-1 flex flex-col">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex items-center gap-2">
             <h3 className="font-medium">{name}</h3>
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{description}</p>
+            {itemAllergens.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 rounded-full p-0 hover:bg-muted"
+                      onClick={() => setShowDetailsDialog(true)}
+                    >
+                      <Info className="h-4 w-4" />
+                      <span className="sr-only">Allergen-Informationen</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Enthält Allergene</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <div className="font-medium">{price.toFixed(2)} €</div>
         </div>
+        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{description}</p>
 
         {/* Tags */}
         {(tags?.length || isVegetarian || isNew) && (
@@ -138,6 +180,75 @@ export function MenuItem({ id, name, description, price, imageUrl, tags, isVeget
           }
         }}
       />
+
+      {/* Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="sm:max-w-[500px] bg-white">
+          <DialogHeader>
+            <DialogTitle>{name}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Allergene */}
+            {itemAllergens.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">Allergene</h4>
+                <div className="flex flex-wrap gap-2">
+                  {itemAllergens.map((allergen) => (
+                    <Badge
+                      key={allergen.id}
+                      variant="outline"
+                      className={cn(
+                        "border",
+                        allergen.severity === "high" && "bg-red-50 text-red-700 border-red-200",
+                        allergen.severity === "medium" && "bg-amber-50 text-amber-700 border-amber-200",
+                        allergen.severity === "low" && "bg-blue-50 text-blue-700 border-blue-200",
+                      )}
+                    >
+                      {allergen.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Inhaltsstoffe */}
+            {ingredients && ingredients.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">Inhaltsstoffe</h4>
+                <div className="flex flex-wrap gap-2">
+                  {ingredients.map((ingredient) => (
+                    <Badge key={ingredient} variant="secondary">
+                      {ingredient}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Diät-Informationen */}
+            <div>
+              <h4 className="font-medium mb-2">Diät-Informationen</h4>
+              <div className="space-y-1">
+                <p className="text-sm">
+                  Vegetarisch: <span className="font-medium">{isVegetarian ? "Ja" : "Nein"}</span>
+                </p>
+                <p className="text-sm">
+                  Vegan: <span className="font-medium">{isVegetarian ? "Ja" : "Nein"}</span>
+                </p>
+                <p className="text-sm">
+                  Glutenfrei: <span className="font-medium">{isVegetarian ? "Ja" : "Nein"}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => setShowDetailsDialog(false)}>Schließen</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

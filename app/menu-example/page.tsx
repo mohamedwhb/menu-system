@@ -6,6 +6,7 @@ import { CategoryCard } from "@/components/menu/category-card"
 import { MenuItem } from "@/components/menu/menu-item"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
+import { useMenu } from "@/contexts/menu-context"
 import { toast } from "@/hooks/use-toast"
 import { TableVerificationDialog } from "@/components/verification/table-verification-dialog"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,9 @@ export default function MenuExample() {
   const { setTableId: setCartTableId, tableVerified, setTableVerified } = useCart()
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
   const [initialVerificationShown, setInitialVerificationShown] = useState(false)
+
+  // Verwenden Sie den MenuContext, um die Menüdaten zu erhalten
+  const { menuItems, categories, getCategoryById } = useMenu()
 
   useEffect(() => {
     // Read the URL parameter "tisch"
@@ -63,6 +67,15 @@ export default function MenuExample() {
     }
   }
 
+  // Filtere verfügbare Menüelemente
+  const availableItems = menuItems.filter((item) => item.available !== false)
+
+  // Hole die empfohlenen Elemente
+  const featuredItems = availableItems.filter((item) => item.featured)
+
+  // Hole die aktiven Kategorien
+  const activeCategories = categories.filter((cat) => cat.active && cat.id !== "all").sort((a, b) => a.order - b.order)
+
   return (
     <div className="container max-w-3xl mx-auto py-8 px-4">
       <div className="flex flex-col sm:flex-row items-center justify-between mb-6">
@@ -97,77 +110,69 @@ export default function MenuExample() {
       </div>
 
       <div className="space-y-4">
-        <CategoryCard title="Vorspeisen" description="Kleine Gerichte zum Teilen" itemCount={3} featured={true}>
-          <MenuItem
-            id="bruschetta"
-            name="Bruschetta"
-            description="Geröstetes Brot mit frischen Tomaten, Basilikum und Knoblauch"
-            price={6.5}
-            imageUrl="/classic-bruschetta.png"
-            tags={["Italienisch", "Vegetarisch"]}
-            isVegetarian={true}
-          />
-          <MenuItem
-            id="mozzarella-sticks"
-            name="Mozzarella Sticks"
-            description="Frittierte Mozzarella-Stäbchen mit Marinara-Sauce"
-            price={7.9}
-            imageUrl="/mozzarella-sticks.png"
-            tags={["Frittiert", "Käse"]}
-            isVegetarian={true}
-          />
-          <MenuItem
-            id="garnelen-cocktail"
-            name="Garnelen Cocktail"
-            description="Frische Garnelen mit hausgemachter Cocktailsauce"
-            price={9.9}
-            imageUrl="/shrimp-cocktail.png"
-            tags={["Meeresfrüchte", "Kalt"]}
-            isNew={true}
-          />
-        </CategoryCard>
+        {/* Empfohlene Gerichte anzeigen, wenn vorhanden */}
+        {featuredItems.length > 0 && (
+          <CategoryCard
+            title="Empfehlungen"
+            description="Unsere besonderen Empfehlungen für Sie"
+            itemCount={featuredItems.length}
+            featured={true}
+          >
+            {featuredItems.map((item) => {
+              // Hole die Kategorie für dieses Menüelement
+              const category = getCategoryById(item.category)
 
-        <CategoryCard title="Hauptgerichte" description="Unsere Spezialitäten" itemCount={2}>
-          <MenuItem
-            id="rinderfilet"
-            name="Rinderfilet"
-            description="Zartes Rinderfilet mit Kartoffelgratin und saisonalem Gemüse"
-            price={24.9}
-            imageUrl="/perfectly-seared-beef-tenderloin.png"
-            tags={["Fleisch", "Premium"]}
-          />
-          <MenuItem
-            id="gemuese-risotto"
-            name="Gemüse-Risotto"
-            description="Cremiges Risotto mit saisonalem Gemüse und Parmesan"
-            price={16.5}
-            imageUrl="/vegetable-risotto.png"
-            tags={["Italienisch", "Vegetarisch"]}
-            isVegetarian={true}
-          />
-        </CategoryCard>
+              return (
+                <MenuItem
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  description={item.description}
+                  price={item.price}
+                  imageUrl={item.image}
+                  tags={category ? [category.name] : []}
+                  isVegetarian={item.vegetarian}
+                  isNew={false}
+                  allergens={item.allergens}
+                  ingredients={item.ingredients}
+                />
+              )
+            })}
+          </CategoryCard>
+        )}
 
-        <CategoryCard title="Desserts" description="Süße Versuchungen" itemCount={2}>
-          <MenuItem
-            id="tiramisu"
-            name="Tiramisu"
-            description="Klassisches italienisches Dessert mit Mascarpone und Kaffee"
-            price={6.9}
-            imageUrl="/classic-tiramisu.png"
-            tags={["Italienisch", "Kaffee"]}
-            isVegetarian={true}
-          />
-          <MenuItem
-            id="creme-brulee"
-            name="Crème Brûlée"
-            description="Französische Vanillecreme mit karamellisierter Zuckerkruste"
-            price={7.5}
-            imageUrl="/classic-creme-brulee.png"
-            tags={["Französisch", "Gebrannt"]}
-            isVegetarian={true}
-            isNew={true}
-          />
-        </CategoryCard>
+        {/* Kategorien anzeigen */}
+        {activeCategories.map((category) => {
+          // Filtere Menüelemente nach Kategorie
+          const categoryItems = availableItems.filter((item) => item.category === category.id)
+
+          if (categoryItems.length === 0) return null
+
+          return (
+            <CategoryCard
+              key={category.id}
+              title={category.name}
+              description={category.description || ""}
+              itemCount={categoryItems.length}
+            >
+              {categoryItems.map((item) => (
+                <MenuItem
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  description={item.description}
+                  price={item.price}
+                  imageUrl={item.image}
+                  tags={[]}
+                  isVegetarian={item.vegetarian}
+                  isNew={false}
+                  allergens={item.allergens}
+                  ingredients={item.ingredients}
+                />
+              ))}
+            </CategoryCard>
+          )
+        })}
       </div>
 
       {/* Verification Dialog */}

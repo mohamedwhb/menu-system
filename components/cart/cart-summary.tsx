@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AlertCircle, Loader2, Percent, Tag, Clock, CreditCard } from "lucide-react"
+import { AlertCircle, Loader2, Percent, Tag, Clock, CreditCard, Banknote } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
 import { PaymentMethodSelector } from "@/components/cart/payment-method-selector"
@@ -57,11 +57,11 @@ export function CartSummary() {
   // Calculate discount (example)
   const discount = promoApplied ? subtotal * 0.1 : 0 // 10% discount
 
-  // Service fee
-  const serviceFee = tableId ? 1.5 : 0
+  // Service fee (removed)
+  const serviceFee = 0
 
   // Calculate total with tip
-  const total = subtotal - discount + serviceFee + tipAmount
+  const total = subtotal - discount + tipAmount
 
   // Check if percentage split is valid (sums to 100%)
   const isSplitValid =
@@ -186,13 +186,6 @@ export function CartSummary() {
             </div>
           )}
 
-          {tableId && serviceFee > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Servicegebühr</span>
-              <span>{serviceFee.toFixed(2)} €</span>
-            </div>
-          )}
-
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm text-primary">
               <span>Trinkgeld</span>
@@ -211,7 +204,7 @@ export function CartSummary() {
           <div className="mb-4">
             <p className="text-sm text-muted-foreground mb-2">Schnelle Zahlungsauswahl:</p>
             <div className="flex gap-2 flex-wrap">
-              {["card", "paypal", "applepay"].map((method) => (
+              {["card", "paypal", "applepay", "cash"].map((method) => (
                 <Button
                   key={method}
                   variant={paymentMethod === method ? "default" : "outline"}
@@ -219,14 +212,20 @@ export function CartSummary() {
                   className="h-9 flex-1"
                   onClick={() => setPaymentMethod(method as any)}
                 >
-                  <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                  {method === "cash" ? (
+                    <Banknote className="h-3.5 w-3.5 mr-1.5" />
+                  ) : (
+                    <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                  )}
                   {method === "card"
                     ? "Karte"
                     : method === "paypal"
                       ? "PayPal"
                       : method === "applepay"
                         ? "Apple Pay"
-                        : method}
+                        : method === "cash"
+                          ? "Bar"
+                          : method}
                 </Button>
               ))}
             </div>

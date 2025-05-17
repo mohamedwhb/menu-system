@@ -14,6 +14,9 @@ import {
   Undo2,
   X,
   CheckIcon as CreditCardCheck,
+  Clock,
+  Receipt,
+  CheckCircle,
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
@@ -29,6 +32,9 @@ import { TableVerificationDialog } from "@/components/verification/table-verific
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
 import { de } from "date-fns/locale"
+import { PaymentMethodSelector } from "@/components/cart/payment-method-selector"
+import { Separator } from "@/components/ui/separator"
+import { ReceiptDisplay } from "@/components/receipt/receipt-display"
 
 export function CartDrawer() {
   const router = useRouter()
@@ -48,9 +54,11 @@ export function CartDrawer() {
     totalPrice,
     removeItem,
     paymentMethod,
+    setPaymentMethod,
     sendItemsToKitchen,
     markItemsAsPaid,
     tipAmount,
+    completePayment,
   } = useCart()
 
   const [removedItem, setRemovedItem] = useState<{
@@ -61,14 +69,23 @@ export function CartDrawer() {
 
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [isSendingToKitchen, setIsSendingToKitchen] = useState(false)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
   const [activeTab, setActiveTab] = useState<string>("cart")
   const [isClosing, setIsClosing] = useState(false)
+  const [showQuickPay, setShowQuickPay] = useState(false)
+  const [paymentComplete, setPaymentComplete] = useState(false)
+  const [orderNumber, setOrderNumber] = useState("")
+  const [paymentTimestamp, setPaymentTimestamp] = useState<number>(0)
+  const [showReceiptOptions, setShowReceiptOptions] = useState(false)
 
   // Get items for each tab
   const cartItems = items.filter((item) => item.status === "cart")
   const kitchenItems = items.filter((item) => item.status === "kitchen")
   const paidItems = items.filter((item) => item.status === "paid")
+
+  // Berechne Gesamtbetrag für Küchenartikel
+  const kitchenTotal = kitchenItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   // Close cart when pressing Escape key
   useEffect(() => {
@@ -94,6 +111,8 @@ export function CartDrawer() {
     setTimeout(() => {
       closeCart()
       setIsClosing(false)
+      setShowQuickPay(false)
+      setPaymentComplete(false)
     }, 300)
   }, [closeCart])
 
@@ -147,7 +166,7 @@ export function CartDrawer() {
     // Simulate a short loading state before redirecting
     setTimeout(() => {
       closeCart()
-      router.push("/checkout")
+      router.push("/checkout?source=cart")
     }, 500)
   }, [tableId, tableVerified, closeCart, router])
 
@@ -192,8 +211,8 @@ export function CartDrawer() {
     }, 1500)
   }, [tableId, tableVerified, cartItems.length, sendItemsToKitchen])
 
-  // Handle mark as paid
-  const handleMarkAsPaid = useCallback(() => {
+  // Mit dieser neuen Funktion:
+  const handleGoToPayment = useCallback(() => {
     if (kitchenItems.length === 0) {
       toast({
         title: "Keine Bestellungen",
@@ -203,16 +222,67 @@ export function CartDrawer() {
       return
     }
 
-    markItemsAsPaid()
+    // Zeige die Schnellbezahlung an, anstatt zur Checkout-Seite zu navigieren
+    setShowQuickPay(true)
+    setPaymentComplete(false)
+  }, [kitchenItems.length])
 
-    toast({
-      title: "Bestellung bezahlt",
-      description: "Die Bestellung wurde als bezahlt markiert.",
-      duration: 3000,
-    })
+  // Generiere eine Bestellnummer
+  const generateOrderNumber = useCallback(() => {
+    const randomNum = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0")
+    const date = new Date()
+    const year = date.getFullYear().toString().slice(2)
+    const month = (date.getMonth() + 1).toString().padStart(2, "0")
+    const day = date.getDate().toString().padStart(2, "0")
+    return `${year}${month}${day}-${randomNum}`
+  }, [])
 
-    setActiveTab("paid")
-  }, [kitchenItems.length, markItemsAsPaid])
+  // Schnellbezahlung durchführen
+  const handleQuickPayment = useCallback(() => {
+    if (!paymentMethod) {
+      toast({
+        title: "Zahlungsmethode fehlt",
+        description: "Bitte wählen Sie eine Zahlungsmethode aus.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsProcessingPayment(true)
+
+    // Generiere Bestellnummer
+    const newOrderNumber = generateOrderNumber()
+    setOrderNumber(newOrderNumber)
+
+    // Simuliere Zahlungsvorgang
+    setTimeout(() => {
+      const timestamp = Date.now()
+      setPaymentTimestamp(timestamp)
+
+      // Bezahlvorgang abschließen
+      completePayment({
+        method: paymentMethod,
+        amount: kitchenTotal + tipAmount,
+        timestamp: timestamp,
+        tableId,
+        orderNumber: newOrderNumber,
+      })
+
+      // Artikel als bezahlt markieren
+      markItemsAsPaid()
+
+      setIsProcessingPayment(false)
+      setPaymentComplete(true)
+
+      toast({
+        title: "Zahlung erfolgreich",
+        description: `Vielen Dank für Ihre Zahlung über ${(kitchenTotal + tipAmount).toFixed(2)} €.`,
+        duration: 5000,
+      })
+    }, 1500)
+  }, [paymentMethod, kitchenTotal, tipAmount, tableId, completePayment, markItemsAsPaid, generateOrderNumber])
 
   // Format timestamp to readable date
   const formatTimestamp = (timestamp?: number) => {
@@ -518,7 +588,7 @@ export function CartDrawer() {
             )}
 
             {/* Kitchen Tab (In der Küche) */}
-            {activeTab === "kitchen" && (
+            {activeTab === "kitchen" && !showQuickPay && !paymentComplete && (
               <div className="p-4">
                 {kitchenItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -569,9 +639,9 @@ export function CartDrawer() {
 
                     {/* Kitchen actions */}
                     <div className="pt-4">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg" onClick={handleMarkAsPaid}>
-                        <CreditCardCheck className="mr-2 h-4 w-4" />
-                        Als bezahlt markieren
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg" onClick={handleGoToPayment}>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Jetzt bezahlen
                       </Button>
 
                       <div className="flex items-center justify-between mt-3 text-sm text-muted-foreground">
@@ -583,6 +653,154 @@ export function CartDrawer() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Quick Pay Interface */}
+            {activeTab === "kitchen" && showQuickPay && !paymentComplete && (
+              <div className="p-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-blue-800 text-sm">
+                  <div className="flex items-start">
+                    <Clock className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium">Schnellbezahlung</h4>
+                      <p className="mt-1">
+                        Bezahlen Sie Ihre Küchenbestellungen schnell und einfach, ohne die Seite zu verlassen.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-3 mb-4">
+                  <h3 className="font-medium mb-2">Bestellübersicht</h3>
+                  <div className="space-y-2">
+                    {kitchenItems.map((item) => (
+                      <div key={`${item.id}-${item.guestId || "self"}`} className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {item.quantity > 1 && `× ${item.quantity}`}
+                          </span>
+                        </div>
+                        <span className="font-medium">{(item.price * item.quantity).toFixed(2)} €</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Zwischensumme</span>
+                      <span>{kitchenTotal.toFixed(2)} €</span>
+                    </div>
+
+                    {tipAmount > 0 && (
+                      <div className="flex justify-between text-sm text-primary">
+                        <span>Trinkgeld</span>
+                        <span>+{tipAmount.toFixed(2)} €</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between font-medium pt-2">
+                      <span>Gesamtbetrag</span>
+                      <span className="text-lg">{(kitchenTotal + tipAmount).toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-3 mb-4">
+                  <h3 className="font-medium mb-2">Zahlungsmethode</h3>
+                  <PaymentMethodSelector />
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleQuickPayment}
+                    disabled={isProcessingPayment || !paymentMethod}
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                        Zahlung wird verarbeitet...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        {(kitchenTotal + tipAmount).toFixed(2)} € bezahlen
+                      </>
+                    )}
+                  </Button>
+
+                  <Button variant="outline" className="w-full" onClick={() => setShowQuickPay(false)}>
+                    Zurück zu den Bestellungen
+                  </Button>
+
+                  <Button
+                    variant="link"
+                    className="w-full text-sm text-muted-foreground"
+                    onClick={() => {
+                      setShowQuickPay(false)
+                      closeCart()
+                      router.push("/checkout?source=kitchen")
+                    }}
+                  >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Zur vollständigen Checkout-Seite
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Complete Interface */}
+            {activeTab === "kitchen" && paymentComplete && (
+              <div className="p-4">
+                <div className="text-center mb-4">
+                  <div className="mx-auto mb-4 bg-green-100 p-3 rounded-full w-16 h-16 flex items-center justify-center">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-medium">Zahlung erfolgreich</h3>
+                  <p className="text-muted-foreground mt-1">Ihre Bestellung wurde erfolgreich bezahlt.</p>
+                </div>
+
+                {/* Quittungsanzeige */}
+                <ReceiptDisplay
+                  items={kitchenItems}
+                  orderNumber={orderNumber}
+                  tableId={tableId}
+                  paymentMethod={paymentMethod}
+                  subtotal={kitchenTotal}
+                  tipAmount={tipAmount}
+                  total={kitchenTotal + tipAmount}
+                  timestamp={paymentTimestamp}
+                />
+
+                <div className="space-y-3 mt-4">
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      setActiveTab("paid")
+                      setPaymentComplete(false)
+                    }}
+                  >
+                    <CreditCardCheck className="mr-2 h-4 w-4" />
+                    Bezahlte Artikel anzeigen
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setActiveTab("cart")
+                      setPaymentComplete(false)
+                    }}
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Zurück zum Warenkorb
+                  </Button>
+                </div>
               </div>
             )}
 

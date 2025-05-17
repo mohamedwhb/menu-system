@@ -1,0 +1,86 @@
+export const allergens = [
+  {
+    id: "gluten",
+    name: "Gluten",
+    description: "Enthält glutenhaltige Getreide",
+    severity: "high",
+  },
+  {
+    id: "milk",
+    name: "Milch",
+    description: "Enthält Milch und Milchprodukte",
+    severity: "medium",
+  },
+  {
+    id: "eggs",
+    name: "Eier",
+    description: "Enthält Eier oder Eiprodukte",
+    severity: "medium",
+  },
+  {
+    id: "nuts",
+    name: "Nüsse",
+    description: "Enthält Nüsse oder Nussprodukte",
+    severity: "high",
+  },
+  {
+    id: "peanuts",
+    name: "Erdnüsse",
+    description: "Enthält Erdnüsse oder Erdnussprodukte",
+    severity: "high",
+  },
+  {
+    id: "soy",
+    name: "Soja",
+    description: "Enthält Soja oder Sojaprodukte",
+    severity: "medium",
+  },
+  {
+    id: "fish",
+    name: "Fisch",
+    description: "Enthält Fisch oder Fischprodukte",
+    severity: "medium",
+  },
+  {
+    id: "shellfish",
+    name: "Schalentiere",
+    description: "Enthält Schalentiere oder Produkte daraus",
+    severity: "high",
+  },
+  {
+    id: "celery",
+    name: "Sellerie",
+    description: "Enthält Sellerie oder Sellerieprodukte",
+    severity: "low",
+  },
+  {
+    id: "mustard",
+    name: "Senf",
+    description: "Enthält Senf oder Senfprodukte",
+    severity: "low",
+  },
+  {
+    id: "sesame",
+    name: "Sesam",
+    description: "Enthält Sesam oder Sesamprodukte",
+    severity: "medium",
+  },
+  {
+    id: "sulfites",
+    name: "Sulfite",
+    description: "Enthält Schwefeldioxid und Sulfite",
+    severity: "low",
+  },
+  {
+    id: "lupin",
+    name: "Lupinen",
+    description: "Enthält Lupinen oder Lupinenprodukte",
+    severity: "low",
+  },
+  {
+    id: "molluscs",
+    name: "Weichtiere",
+    description: "Enthält Weichtiere oder Produkte daraus",
+    severity: "medium",
+  },
+]

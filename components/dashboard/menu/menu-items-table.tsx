@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Edit, MoreHorizontal, Star, Eye, EyeOff, ArrowUpDown } from "lucide-react"
+import { Edit, MoreHorizontal, Star, Eye, EyeOff, ArrowUpDown, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,13 +13,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EditMenuItemDialog } from "@/components/dashboard/menu/edit-menu-item-dialog"
-import { menuItems } from "@/data/menu-items"
+import { useMenu } from "@/contexts/menu-context"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function MenuItemsTable() {
-  const [items, setItems] = useState(menuItems)
+  const { menuItems, toggleFeatured, toggleAvailable, deleteMenuItem, getCategoryById } = useMenu()
   const [editingItem, setEditingItem] = useState<(typeof menuItems)[0] | null>(null)
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -30,12 +41,12 @@ export function MenuItemsTable() {
     }
   }
 
-  const toggleFeatured = (id: string) => {
-    setItems(items.map((item) => (item.id === id ? { ...item, featured: !item.featured } : item)))
-  }
-
-  const toggleAvailable = (id: string) => {
-    setItems(items.map((item) => (item.id === id ? { ...item, available: !item.available } : item)))
+  // Funktion zum Löschen eines Menüelements
+  const handleDelete = () => {
+    if (itemToDelete) {
+      deleteMenuItem(itemToDelete)
+      setItemToDelete(null)
+    }
   }
 
   return (
@@ -84,100 +95,108 @@ export function MenuItemsTable() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b border-[#EAEAEA] hover:bg-[#F9FAFB] transition-colors">
-                  <td className="p-4 align-middle">
-                    <Checkbox />
-                  </td>
-                  <td className="p-4 align-middle font-medium text-[#1F1F1F]">
-                    {item.name}
-                    <div className="text-xs text-[#6B7280] line-clamp-1 mt-1">{item.description}</div>
-                  </td>
-                  <td className="p-4 align-middle">
-                    {item.category && (
-                      <Badge variant="outline" className="text-xs">
-                        {item.category}
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="p-4 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {item.vegetarian && (
-                        <Badge variant="outline" className="bg-[#F0FDF4] text-[#16A34A] border-[#DCFCE7] text-xs">
-                          Vegetarisch
-                        </Badge>
-                      )}
-                      {item.vegan && (
-                        <Badge variant="outline" className="bg-[#ECFDF5] text-[#059669] border-[#D1FAE5] text-xs">
-                          Vegan
-                        </Badge>
-                      )}
-                      {item.glutenFree && (
-                        <Badge variant="outline" className="bg-[#FEF3C7] text-[#D97706] border-[#FDE68A] text-xs">
-                          Glutenfrei
-                        </Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4 align-middle text-right font-medium">{item.price.toFixed(2)} €</td>
-                  <td className="p-4 align-middle">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => toggleFeatured(item.id)}
-                        title={item.featured ? "Nicht mehr empfehlen" : "Als empfohlen markieren"}
-                      >
-                        {item.featured ? (
-                          <Star className="h-4 w-4 text-[#F59E0B]" />
-                        ) : (
-                          <Star className="h-4 w-4 text-[#D1D5DB]" />
-                        )}
-                      </Button>
+              {menuItems.map((item) => {
+                // Hole die Kategorie für dieses Menüelement
+                const category = getCategoryById(item.category)
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => toggleAvailable(item.id)}
-                        title={item.available ? "Als nicht verfügbar markieren" : "Als verfügbar markieren"}
-                      >
-                        {item.available ? (
-                          <Eye className="h-4 w-4 text-[#10B981]" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-[#EF4444]" />
+                return (
+                  <tr key={item.id} className="border-b border-[#EAEAEA] hover:bg-[#F9FAFB] transition-colors">
+                    <td className="p-4 align-middle">
+                      <Checkbox />
+                    </td>
+                    <td className="p-4 align-middle font-medium text-[#1F1F1F]">
+                      {item.name}
+                      <div className="text-xs text-[#6B7280] line-clamp-1 mt-1">{item.description}</div>
+                    </td>
+                    <td className="p-4 align-middle">
+                      {category && (
+                        <Badge variant="outline" className="text-xs">
+                          {category.name}
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="p-4 align-middle">
+                      <div className="flex flex-wrap gap-1">
+                        {item.vegetarian && (
+                          <Badge variant="outline" className="bg-[#F0FDF4] text-[#16A34A] border-[#DCFCE7] text-xs">
+                            Vegetarisch
+                          </Badge>
                         )}
-                      </Button>
-                    </div>
-                  </td>
-                  <td className="p-4 align-middle">
-                    <div className="flex items-center justify-end">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Bearbeiten</span>
-                      </Button>
+                        {item.vegan && (
+                          <Badge variant="outline" className="bg-[#ECFDF5] text-[#059669] border-[#D1FAE5] text-xs">
+                            Vegan
+                          </Badge>
+                        )}
+                        {item.glutenFree && (
+                          <Badge variant="outline" className="bg-[#FEF3C7] text-[#D97706] border-[#FDE68A] text-xs">
+                            Glutenfrei
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 align-middle text-right font-medium">{item.price.toFixed(2)} €</td>
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => toggleFeatured(item.id)}
+                          title={item.featured ? "Nicht mehr empfehlen" : "Als empfohlen markieren"}
+                        >
+                          {item.featured ? (
+                            <Star className="h-4 w-4 text-[#F59E0B]" />
+                          ) : (
+                            <Star className="h-4 w-4 text-[#D1D5DB]" />
+                          )}
+                        </Button>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Aktionen</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[160px] bg-white border-[#EAEAEA]">
-                          <DropdownMenuItem onClick={() => setEditingItem(item)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Bearbeiten
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-500">Löschen</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => toggleAvailable(item.id)}
+                          title={item.available ? "Als nicht verfügbar markieren" : "Als verfügbar markieren"}
+                        >
+                          {item.available ? (
+                            <Eye className="h-4 w-4 text-[#10B981]" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-[#EF4444]" />
+                          )}
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center justify-end">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Bearbeiten</span>
+                        </Button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Aktionen</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-[160px] bg-white border-[#EAEAEA]">
+                            <DropdownMenuItem onClick={() => setEditingItem(item)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Bearbeiten
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-500" onClick={() => setItemToDelete(item.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Löschen
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -190,6 +209,25 @@ export function MenuItemsTable() {
           onOpenChange={(open) => !open && setEditingItem(null)}
         />
       )}
+
+      {/* Bestätigungsdialog zum Löschen */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Menüelement löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sind Sie sicher, dass Sie dieses Menüelement löschen möchten? Diese Aktion kann nicht rückgängig gemacht
+              werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
