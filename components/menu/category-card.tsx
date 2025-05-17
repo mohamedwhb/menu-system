@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface CategoryCardProps {
   title: string
@@ -27,50 +28,57 @@ export function CategoryCard({
   children,
   ...props
 }: CategoryCardProps) {
-  const [isExpanded, setIsExpanded] = useState(featured)
+  const [isExpanded, setIsExpanded] = useState(featured || true)
 
   return (
     <Card
-      className={cn("transition-all duration-300", featured && "border-primary/50 bg-primary/5", className)}
+      className={cn(
+        "transition-all duration-300 overflow-hidden",
+        featured && "border-primary/50 bg-primary/5",
+        className,
+      )}
       {...props}
     >
-      <CardHeader className="flex flex-row items-center justify-between p-4">
+      <CardHeader
+        className="flex flex-row items-center justify-between p-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-lg">{title}</h3>
             {featured && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                 Empfohlen
               </Badge>
             )}
+            <Badge variant="secondary" className="text-xs">
+              {itemCount} {itemCount === 1 ? "Artikel" : "Artikel"}
+            </Badge>
           </div>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => setIsExpanded(!isExpanded)}
+          className="h-8 w-8 p-0 rounded-full"
           aria-label={isExpanded ? "Kategorie einklappen" : "Kategorie ausklappen"}
         >
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </Button>
       </CardHeader>
-      <CardContent
-        className={cn(
-          "grid transition-all duration-300 overflow-hidden",
-          isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <CardContent className="px-4 pb-4">{children}</CardContent>
+          </motion.div>
         )}
-      >
-        <div className="overflow-hidden">
-          <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-            <span>
-              {itemCount} {itemCount === 1 ? "Artikel" : "Artikel"}
-            </span>
-          </div>
-          <div className="space-y-3">{children}</div>
-        </div>
-      </CardContent>
+      </AnimatePresence>
     </Card>
   )
 }

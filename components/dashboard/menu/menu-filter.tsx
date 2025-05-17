@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { Search, Filter } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, Filter, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,54 +16,60 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useMenu } from "@/contexts/menu-context"
 
-interface MenuFilterProps {
-  onFilterChange: (filters: {
-    search: string
-    categories: string[]
-    dietary: { vegetarian: boolean; vegan: boolean; glutenFree: boolean }
-    availability: { available: boolean; unavailable: boolean }
-  }) => void
+export interface MenuFilters {
+  search: string
+  dietary: {
+    vegetarian: boolean
+    vegan: boolean
+    glutenFree: boolean
+  }
+  availability: {
+    available: boolean
+    unavailable: boolean
+  }
 }
 
-export function MenuFilter({ onFilterChange }: MenuFilterProps) {
-  const { categories } = useMenu()
-  const [search, setSearch] = useState("")
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+interface MenuFilterProps {
+  onFilterChange: (filters: MenuFilters) => void
+  initialFilters?: Partial<MenuFilters>
+}
+
+export function MenuFilter({ onFilterChange, initialFilters }: MenuFilterProps) {
+  const [search, setSearch] = useState(initialFilters?.search || "")
   const [dietary, setDietary] = useState({
-    vegetarian: false,
-    vegan: false,
-    glutenFree: false,
+    vegetarian: initialFilters?.dietary?.vegetarian || false,
+    vegan: initialFilters?.dietary?.vegan || false,
+    glutenFree: initialFilters?.dietary?.glutenFree || false,
   })
   const [availability, setAvailability] = useState({
-    available: true,
-    unavailable: true,
+    available: initialFilters?.availability?.available ?? true,
+    unavailable: initialFilters?.availability?.unavailable ?? true,
   })
 
-  // Aktive Kategorien filtern und sortieren
-  const activeCategories = categories.filter((cat) => cat.active).sort((a, b) => a.order - b.order)
+  // Wenn sich die initialFilters ändern, aktualisieren wir den State
+  useEffect(() => {
+    if (initialFilters) {
+      if (initialFilters.search !== undefined) setSearch(initialFilters.search)
+      if (initialFilters.dietary) setDietary({ ...dietary, ...initialFilters.dietary })
+      if (initialFilters.availability) setAvailability({ ...availability, ...initialFilters.availability })
+    }
+  }, [initialFilters])
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setSearch(value)
     onFilterChange({
       search: value,
-      categories: selectedCategories,
       dietary,
       availability,
     })
   }
 
-  const toggleCategory = (categoryId: string) => {
-    const newSelectedCategories = selectedCategories.includes(categoryId)
-      ? selectedCategories.filter((id) => id !== categoryId)
-      : [...selectedCategories, categoryId]
-
-    setSelectedCategories(newSelectedCategories)
+  const clearSearch = () => {
+    setSearch("")
     onFilterChange({
-      search,
-      categories: newSelectedCategories,
+      search: "",
       dietary,
       availability,
     })
@@ -74,7 +80,6 @@ export function MenuFilter({ onFilterChange }: MenuFilterProps) {
     setDietary(newDietary)
     onFilterChange({
       search,
-      categories: selectedCategories,
       dietary: newDietary,
       availability,
     })
@@ -85,50 +90,52 @@ export function MenuFilter({ onFilterChange }: MenuFilterProps) {
     setAvailability(newAvailability)
     onFilterChange({
       search,
-      categories: selectedCategories,
       dietary,
       availability: newAvailability,
     })
   }
 
+  // Zählen der aktiven Filter (ohne Verfügbarkeit, da diese standardmäßig aktiviert sind)
+  const activeFilterCount = Object.values(dietary).filter(Boolean).length
+
   return (
     <div className="flex flex-col sm:flex-row gap-2 mb-4">
       <div className="relative flex-1">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input type="search" placeholder="Suchen..." className="pl-8" value={search} onChange={handleSearchChange} />
+        <Input
+          type="search"
+          placeholder="Suchen..."
+          className="pl-8 pr-8"
+          value={search}
+          onChange={handleSearchChange}
+        />
+        {search && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1 h-7 w-7 rounded-full p-0 opacity-70 hover:opacity-100"
+            onClick={clearSearch}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Suche löschen</span>
+          </Button>
+        )}
       </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-1">
+          <Button variant="outline" className="gap-1 whitespace-nowrap">
             <Filter className="h-4 w-4" />
             Filter
+            {activeFilterCount > 0 && (
+              <span className="ml-1 rounded-full bg-primary w-5 h-5 text-xs flex items-center justify-center text-primary-foreground">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Kategorien</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup className="max-h-[200px] overflow-y-auto">
-            {activeCategories.map((category) => (
-              <DropdownMenuItem key={category.id} onSelect={(e) => e.preventDefault()}>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`category-${category.id}`}
-                    checked={selectedCategories.includes(category.id)}
-                    onCheckedChange={() => toggleCategory(category.id)}
-                  />
-                  <label
-                    htmlFor={`category-${category.id}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    {category.name}
-                  </label>
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-
-          <DropdownMenuLabel className="mt-2">Diät-Optionen</DropdownMenuLabel>
+          <DropdownMenuLabel>Diät-Optionen</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

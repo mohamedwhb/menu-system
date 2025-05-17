@@ -29,7 +29,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 
-export function MenuCategories() {
+interface MenuCategoriesProps {
+  selectedCategory?: string
+  onCategorySelect?: (categoryId: string) => void
+}
+
+export function MenuCategories({ selectedCategory = "all", onCategorySelect }: MenuCategoriesProps) {
   const { categories, addCategory, updateCategory, deleteCategory, getItemCountByCategory } = useMenu()
   const [isEditing, setIsEditing] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -93,6 +98,12 @@ export function MenuCategories() {
     setEditActive(category.active)
   }
 
+  const handleCategoryClick = (categoryId: string) => {
+    if (onCategorySelect && !isEditing) {
+      onCategorySelect(categoryId)
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -127,6 +138,7 @@ export function MenuCategories() {
         {sortedCategories.map((category) => {
           // Anzahl der Menüelemente in dieser Kategorie
           const itemCount = getItemCountByCategory(category.id)
+          const isSelected = selectedCategory === category.id
 
           return (
             <div
@@ -135,12 +147,15 @@ export function MenuCategories() {
                 "group flex items-center gap-1 rounded-full border px-3 py-1 text-sm",
                 category.active ? "bg-white" : "bg-muted text-muted-foreground",
                 isEditing && "pr-1",
+                isSelected && "bg-primary/10 border-primary/30 text-primary font-medium",
+                !isEditing && "cursor-pointer hover:bg-primary/5 hover:border-primary/20",
               )}
+              onClick={() => handleCategoryClick(category.id)}
             >
               {isEditing && <GripVertical className="h-3 w-3 text-muted-foreground cursor-move" />}
               <span>{category.name}</span>
               {itemCount > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 rounded-full">
+                <Badge variant={isSelected ? "default" : "secondary"} className="ml-1 h-5 min-w-5 px-1 rounded-full">
                   {itemCount}
                 </Badge>
               )}
@@ -150,7 +165,10 @@ export function MenuCategories() {
                     variant="ghost"
                     size="icon"
                     className="h-5 w-5 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => openEditDialog(category)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openEditDialog(category)
+                    }}
                   >
                     <Edit className="h-3 w-3" />
                     <span className="sr-only">Bearbeiten</span>
@@ -160,7 +178,10 @@ export function MenuCategories() {
                       variant="ghost"
                       size="icon"
                       className="h-5 w-5 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => setCategoryToDelete(category.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setCategoryToDelete(category.id)
+                      }}
                     >
                       <Trash2 className="h-3 w-3" />
                       <span className="sr-only">Löschen</span>

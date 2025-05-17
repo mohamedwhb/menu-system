@@ -25,21 +25,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function MenuItemsTable() {
-  const { menuItems, toggleFeatured, toggleAvailable, deleteMenuItem, getCategoryById } = useMenu()
-  const [editingItem, setEditingItem] = useState<(typeof menuItems)[0] | null>(null)
-  const [sortColumn, setSortColumn] = useState<string | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+interface MenuItemsTableProps {
+  items: ReturnType<typeof useMenu>["menuItems"]
+  onSort?: (key: string) => void
+  sortConfig?: { key: string; direction: "asc" | "desc" } | null
+}
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortColumn(column)
-      setSortDirection("asc")
-    }
-  }
+export function MenuItemsTable({ items, onSort, sortConfig }: MenuItemsTableProps) {
+  const { toggleFeatured, toggleAvailable, deleteMenuItem, getCategoryById } = useMenu()
+  const [editingItem, setEditingItem] = useState<(typeof items)[0] | null>(null)
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
 
   // Funktion zum Löschen eines Menüelements
   const handleDelete = () => {
@@ -49,64 +45,118 @@ export function MenuItemsTable() {
     }
   }
 
+  // Funktion zum Auswählen/Abwählen aller Elemente
+  const toggleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(items.map((item) => item.id))
+    }
+  }
+
+  // Funktion zum Auswählen/Abwählen eines Elements
+  const toggleSelectItem = (id: string) => {
+    if (selectedItems.includes(id)) {
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id))
+    } else {
+      setSelectedItems([...selectedItems, id])
+    }
+  }
+
+  // Leerer Zustand
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8 border rounded-md bg-muted/10">
+        <p className="text-muted-foreground">Keine Menüelemente gefunden</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Passen Sie Ihre Filter an oder fügen Sie neue Menüelemente hinzu
+        </p>
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="rounded-md border border-[#EAEAEA] overflow-hidden">
+      <div className="rounded-md border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full caption-bottom text-sm">
-            <thead className="border-b border-[#EAEAEA] bg-[#F9FAFB]">
+            <thead className="border-b bg-muted/30">
               <tr>
                 <th className="h-12 w-12 px-4 text-left align-middle">
-                  <Checkbox />
+                  <Checkbox
+                    checked={selectedItems.length === items.length && items.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Alle auswählen"
+                  />
                 </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-[#6B7280]">
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                   <Button
                     variant="ghost"
-                    onClick={() => handleSort("name")}
-                    className="flex items-center gap-1 hover:bg-transparent hover:text-[#1F1F1F] -ml-3"
+                    onClick={() => onSort?.("name")}
+                    className="flex items-center gap-1 hover:bg-transparent -ml-3"
                   >
                     Name
-                    <ArrowUpDown className="h-4 w-4" />
+                    {sortConfig?.key === "name" && (
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${sortConfig.direction === "asc" ? "rotate-0" : "rotate-180"}`}
+                      />
+                    )}
                   </Button>
                 </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-[#6B7280]">
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                   <Button
                     variant="ghost"
-                    onClick={() => handleSort("category")}
-                    className="flex items-center gap-1 hover:bg-transparent hover:text-[#1F1F1F] -ml-3"
+                    onClick={() => onSort?.("category")}
+                    className="flex items-center gap-1 hover:bg-transparent -ml-3"
                   >
                     Kategorie
-                    <ArrowUpDown className="h-4 w-4" />
+                    {sortConfig?.key === "category" && (
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${sortConfig.direction === "asc" ? "rotate-0" : "rotate-180"}`}
+                      />
+                    )}
                   </Button>
                 </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-[#6B7280]">Diät-Optionen</th>
-                <th className="h-12 px-4 text-right align-middle font-medium text-[#6B7280]">
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Diät-Optionen</th>
+                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
                   <Button
                     variant="ghost"
-                    onClick={() => handleSort("price")}
-                    className="flex items-center gap-1 hover:bg-transparent hover:text-[#1F1F1F] -ml-3"
+                    onClick={() => onSort?.("price")}
+                    className="flex items-center gap-1 hover:bg-transparent -ml-3"
                   >
                     Preis
-                    <ArrowUpDown className="h-4 w-4" />
+                    {sortConfig?.key === "price" && (
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${sortConfig.direction === "asc" ? "rotate-0" : "rotate-180"}`}
+                      />
+                    )}
                   </Button>
                 </th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-[#6B7280]">Status</th>
-                <th className="h-12 w-[100px] px-4 align-middle font-medium text-[#6B7280]">Aktionen</th>
+                <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Status</th>
+                <th className="h-12 w-[100px] px-4 align-middle font-medium text-muted-foreground">Aktionen</th>
               </tr>
             </thead>
             <tbody>
-              {menuItems.map((item) => {
+              {items.map((item) => {
                 // Hole die Kategorie für dieses Menüelement
                 const category = getCategoryById(item.category)
+                const isSelected = selectedItems.includes(item.id)
 
                 return (
-                  <tr key={item.id} className="border-b border-[#EAEAEA] hover:bg-[#F9FAFB] transition-colors">
+                  <tr
+                    key={item.id}
+                    className={`border-b hover:bg-muted/20 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                  >
                     <td className="p-4 align-middle">
-                      <Checkbox />
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectItem(item.id)}
+                        aria-label={`${item.name} auswählen`}
+                      />
                     </td>
-                    <td className="p-4 align-middle font-medium text-[#1F1F1F]">
+                    <td className="p-4 align-middle font-medium">
                       {item.name}
-                      <div className="text-xs text-[#6B7280] line-clamp-1 mt-1">{item.description}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</div>
                     </td>
                     <td className="p-4 align-middle">
                       {category && (
@@ -118,17 +168,20 @@ export function MenuItemsTable() {
                     <td className="p-4 align-middle">
                       <div className="flex flex-wrap gap-1">
                         {item.vegetarian && (
-                          <Badge variant="outline" className="bg-[#F0FDF4] text-[#16A34A] border-[#DCFCE7] text-xs">
+                          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
                             Vegetarisch
                           </Badge>
                         )}
                         {item.vegan && (
-                          <Badge variant="outline" className="bg-[#ECFDF5] text-[#059669] border-[#D1FAE5] text-xs">
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-50 text-emerald-600 border-emerald-200 text-xs"
+                          >
                             Vegan
                           </Badge>
                         )}
                         {item.glutenFree && (
-                          <Badge variant="outline" className="bg-[#FEF3C7] text-[#D97706] border-[#FDE68A] text-xs">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs">
                             Glutenfrei
                           </Badge>
                         )}
@@ -145,9 +198,9 @@ export function MenuItemsTable() {
                           title={item.featured ? "Nicht mehr empfehlen" : "Als empfohlen markieren"}
                         >
                           {item.featured ? (
-                            <Star className="h-4 w-4 text-[#F59E0B]" />
+                            <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                           ) : (
-                            <Star className="h-4 w-4 text-[#D1D5DB]" />
+                            <Star className="h-4 w-4 text-muted-foreground" />
                           )}
                         </Button>
 
@@ -159,9 +212,9 @@ export function MenuItemsTable() {
                           title={item.available ? "Als nicht verfügbar markieren" : "Als verfügbar markieren"}
                         >
                           {item.available ? (
-                            <Eye className="h-4 w-4 text-[#10B981]" />
+                            <Eye className="h-4 w-4 text-green-500" />
                           ) : (
-                            <EyeOff className="h-4 w-4 text-[#EF4444]" />
+                            <EyeOff className="h-4 w-4 text-red-500" />
                           )}
                         </Button>
                       </div>
@@ -180,7 +233,7 @@ export function MenuItemsTable() {
                               <span className="sr-only">Aktionen</span>
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-[160px] bg-white border-[#EAEAEA]">
+                          <DropdownMenuContent align="end" className="w-[160px]">
                             <DropdownMenuItem onClick={() => setEditingItem(item)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Bearbeiten

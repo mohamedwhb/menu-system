@@ -4,6 +4,7 @@ import Image from "next/image"
 import { Edit, MoreHorizontal, Star, StarOff, Eye, EyeOff, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +26,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function MenuItemsGrid() {
-  const { menuItems, toggleFeatured, toggleAvailable, deleteMenuItem, getCategoryById } = useMenu()
-  const [editingItem, setEditingItem] = useState<(typeof menuItems)[0] | null>(null)
+interface MenuItemsGridProps {
+  items: ReturnType<typeof useMenu>["menuItems"]
+}
+
+export function MenuItemsGrid({ items }: MenuItemsGridProps) {
+  const { toggleFeatured, toggleAvailable, deleteMenuItem, getCategoryById } = useMenu()
+  const [editingItem, setEditingItem] = useState<(typeof items)[0] | null>(null)
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
 
   // Funktion zum Löschen eines Menüelements
   const handleDelete = () => {
@@ -38,26 +44,61 @@ export function MenuItemsGrid() {
     }
   }
 
+  // Funktion zum Auswählen/Abwählen eines Elements
+  const toggleSelectItem = (id: string) => {
+    if (selectedItems.includes(id)) {
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id))
+    } else {
+      setSelectedItems([...selectedItems, id])
+    }
+  }
+
+  // Leerer Zustand
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8 border rounded-md bg-muted/10">
+        <p className="text-muted-foreground">Keine Menüelemente gefunden</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Passen Sie Ihre Filter an oder fügen Sie neue Menüelemente hinzu
+        </p>
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {menuItems.map((item) => {
+        {items.map((item) => {
           // Hole die Kategorie für dieses Menüelement
           const category = getCategoryById(item.category)
+          const isSelected = selectedItems.includes(item.id)
 
           return (
             <div
               key={item.id}
-              className="border border-[#EAEAEA] rounded-lg overflow-hidden bg-white hover:shadow-md transition-shadow"
+              className={`border rounded-lg overflow-hidden bg-white hover:shadow-md transition-shadow ${
+                isSelected ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
             >
-              <div className="relative h-48 w-full bg-[#F7F7F7]">
+              <div className="relative h-48 w-full bg-muted/30">
+                <div className="absolute top-2 left-2 z-10">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleSelectItem(item.id)}
+                    aria-label={`${item.name} auswählen`}
+                    className="bg-white/90 border-gray-300"
+                  />
+                </div>
+
                 {item.image ? (
                   <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-[#6B7280]">Kein Bild</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                    Kein Bild
+                  </div>
                 )}
 
-                {item.featured && <Badge className="absolute top-2 left-2 bg-[#006AFF]">Empfohlen</Badge>}
+                {item.featured && <Badge className="absolute top-2 left-8 bg-primary">Empfohlen</Badge>}
 
                 {!item.available && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -75,9 +116,9 @@ export function MenuItemsGrid() {
                     onClick={() => toggleFeatured(item.id)}
                   >
                     {item.featured ? (
-                      <StarOff className="h-4 w-4 text-[#6B7280]" />
+                      <StarOff className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <Star className="h-4 w-4 text-[#6B7280]" />
+                      <Star className="h-4 w-4 text-muted-foreground" />
                     )}
                   </Button>
 
@@ -88,9 +129,9 @@ export function MenuItemsGrid() {
                     onClick={() => toggleAvailable(item.id)}
                   >
                     {item.available ? (
-                      <EyeOff className="h-4 w-4 text-[#6B7280]" />
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <Eye className="h-4 w-4 text-[#6B7280]" />
+                      <Eye className="h-4 w-4 text-muted-foreground" />
                     )}
                   </Button>
 
@@ -101,10 +142,10 @@ export function MenuItemsGrid() {
                         size="icon"
                         className="h-8 w-8 bg-white/90 hover:bg-white border-transparent"
                       >
-                        <MoreHorizontal className="h-4 w-4 text-[#6B7280]" />
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[160px] bg-white border-[#EAEAEA]">
+                    <DropdownMenuContent align="end" className="w-[160px]">
                       <DropdownMenuItem onClick={() => setEditingItem(item)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Bearbeiten
@@ -122,10 +163,10 @@ export function MenuItemsGrid() {
               <div className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-medium text-[#1F1F1F]">{item.name}</h3>
-                    <p className="text-sm text-[#6B7280] line-clamp-2 mt-1">{item.description}</p>
+                    <h3 className="font-medium">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
                   </div>
-                  <div className="text-[#1F1F1F] font-medium">{item.price.toFixed(2)} €</div>
+                  <div className="font-medium">{item.price.toFixed(2)} €</div>
                 </div>
 
                 <div className="flex flex-wrap gap-1 mt-3">
@@ -135,17 +176,17 @@ export function MenuItemsGrid() {
                     </Badge>
                   )}
                   {item.vegetarian && (
-                    <Badge variant="outline" className="bg-[#F0FDF4] text-[#16A34A] border-[#DCFCE7] text-xs">
+                    <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
                       Vegetarisch
                     </Badge>
                   )}
                   {item.vegan && (
-                    <Badge variant="outline" className="bg-[#ECFDF5] text-[#059669] border-[#D1FAE5] text-xs">
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-xs">
                       Vegan
                     </Badge>
                   )}
                   {item.glutenFree && (
-                    <Badge variant="outline" className="bg-[#FEF3C7] text-[#D97706] border-[#FDE68A] text-xs">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs">
                       Glutenfrei
                     </Badge>
                   )}

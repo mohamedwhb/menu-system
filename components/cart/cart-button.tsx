@@ -18,9 +18,9 @@ export function CartButton() {
   return (
     <Button onClick={toggleCart} variant="outline" size="icon" className="relative" aria-label="Warenkorb öffnen">
       <ShoppingCart className="h-5 w-5" />
-      {(itemCount > 0 || kitchenItemCount > 0 || paidItemCount > 0) && (
-        <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-          {itemCount + kitchenItemCount + paidItemCount}
+      {totalCount > 0 && (
+        <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+          {totalCount}
         </span>
       )}
     </Button>

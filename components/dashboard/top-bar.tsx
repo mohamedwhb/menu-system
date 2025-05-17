@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, LogOut, Menu, User } from "lucide-react"
+import { Bell, LogOut, Menu, User, Settings, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,7 +10,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function TopBar() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
@@ -36,18 +38,38 @@ export function TopBar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full text-[#1F1F1F]">
-              <User className="h-5 w-5" />
-              <span className="sr-only">User menu</span>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src="/placeholder.svg" alt="Avatar" />
+                <AvatarFallback className="bg-[#006AFF] text-white">MM</AvatarFallback>
+              </Avatar>
+              <span className="sr-only">Mein Account</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white border-[#EAEAEA]">
-            <DropdownMenuLabel>Mein Account</DropdownMenuLabel>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">Max Mustermann</p>
+                <p className="text-xs leading-none text-muted-foreground">max@example.com</p>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profil</DropdownMenuItem>
-            <DropdownMenuItem>Einstellungen</DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuItem className="cursor-pointer flex items-center">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profil</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer flex items-center">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Einstellungen</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer flex items-center">
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>Abrechnung</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-500">
+            <DropdownMenuItem className="cursor-pointer flex items-center text-red-600 focus:text-red-600 focus:bg-red-100">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Abmelden</span>
             </DropdownMenuItem>

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { ShoppingCart, Info } from "lucide-react"
+import { ShoppingCart, Leaf, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { TableVerificationDialog } from "@/components/verification/table-verification-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { motion } from "framer-motion"
 
 interface MenuItemProps {
   id: string
@@ -42,6 +43,7 @@ export function MenuItem({
   const { allergens: allAllergens } = useMenu()
   const [showVerificationDialog, setShowVerificationDialog] = useState(false)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
 
   const handleAddToCart = () => {
     // If table is selected but not verified, show verification dialog
@@ -71,7 +73,17 @@ export function MenuItem({
     allergens && allergens.length > 0 ? allAllergens.filter((allergen) => allergens.includes(allergen.id)) : []
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={cn(
+        "flex flex-col sm:flex-row gap-4 p-4 border rounded-lg transition-all duration-300",
+        isHovered ? "shadow-md border-primary/20 bg-primary/5" : "hover:shadow-sm",
+      )}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
       {/* Image */}
       {imageUrl && (
         <div className="sm:w-24 sm:h-24 h-32 relative rounded-md overflow-hidden flex-shrink-0">
@@ -79,7 +91,7 @@ export function MenuItem({
             src={imageUrl || "/placeholder.svg"}
             alt={name}
             fill
-            className="object-cover"
+            className={cn("object-cover transition-transform duration-300", isHovered && "scale-110")}
             sizes="(max-width: 768px) 100vw, 96px"
           />
         </div>
@@ -90,6 +102,20 @@ export function MenuItem({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <h3 className="font-medium">{name}</h3>
+            {isVegetarian && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex-shrink-0">
+                      <Leaf className="h-4 w-4 text-green-600" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Vegetarisch</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {itemAllergens.length > 0 && (
               <TooltipProvider>
                 <Tooltip>
@@ -98,9 +124,12 @@ export function MenuItem({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 rounded-full p-0 hover:bg-muted"
-                      onClick={() => setShowDetailsDialog(true)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowDetailsDialog(true)
+                      }}
                     >
-                      <Info className="h-4 w-4" />
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
                       <span className="sr-only">Allergen-Informationen</span>
                     </Button>
                   </TooltipTrigger>
@@ -116,13 +145,8 @@ export function MenuItem({
         <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{description}</p>
 
         {/* Tags */}
-        {(tags?.length || isVegetarian || isNew) && (
+        {(tags?.length || isNew) && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {isVegetarian && (
-              <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200">
-                Vegetarisch
-              </Badge>
-            )}
             {isNew && (
               <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200">
                 Neu
@@ -142,6 +166,8 @@ export function MenuItem({
             onClick={handleAddToCart}
             size="sm"
             className={cn(
+              "transition-all duration-300",
+              isHovered && "shadow-md",
               tableId && tableVerified && "bg-green-600 hover:bg-green-700",
               tableId && !tableVerified && "bg-amber-600 hover:bg-amber-700",
             )}
@@ -249,6 +275,6 @@ export function MenuItem({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   )
 }
