@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { Minus, Plus, Move, Square, Circle, RotateCw, Trash2, CuboidIcon as Cube, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -60,10 +59,11 @@ interface FloorPlanData {
   floors: Floor[]
 }
 
-export function FloorPlanEditor() {
-  const searchParams = useSearchParams()
-  const planId = searchParams.get("id") || "default"
+interface FloorPlanEditorProps {
+  initialPlanId: string
+}
 
+export function FloorPlanEditor({ initialPlanId }: FloorPlanEditorProps) {
   const [zoom, setZoom] = useState(1)
   const [mode, setMode] = useState<"select" | "move" | "add-square" | "add-circle">("select")
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
@@ -80,7 +80,7 @@ export function FloorPlanEditor() {
 
   // Load floor plan data
   useEffect(() => {
-    const plan = floorPlans.find((p) => p.id === planId) || floorPlans[0]
+    const plan = floorPlans.find((p) => p.id === initialPlanId) || floorPlans[0]
     setFloorPlan(plan)
 
     // Set default selected floor and room
@@ -91,7 +91,7 @@ export function FloorPlanEditor() {
         setSelectedRoomId(plan.floors[0].rooms[0].id)
       }
     }
-  }, [planId])
+  }, [initialPlanId])
 
   const handleZoomIn = () => {
     setZoom((prev) => Math.min(prev + 0.1, 2))
