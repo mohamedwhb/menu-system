@@ -33,38 +33,32 @@ export function PaymentMethodSelector() {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">Zahlungsmethode</h3>
+    <div className="grid grid-cols-2 gap-2">
+      {paymentMethods.map((method) => {
+        const Icon = method.icon
+        const isSelected = paymentMethod === method.id
 
-      <div className="grid grid-cols-2 gap-2">
-        {paymentMethods.map((method) => {
-          const Icon = method.icon
-          const isSelected = paymentMethod === method.id
-
-          return (
-            <button
-              key={method.id}
-              type="button"
-              className={cn(
-                "relative flex flex-col items-center justify-center p-3 rounded-lg border text-sm transition-all",
-                "hover:border-primary/50 hover:bg-primary/5",
-                isSelected
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-foreground",
-              )}
-              onClick={() => setPaymentMethod(method.id)}
-            >
-              {isSelected && (
-                <div className="absolute top-1 right-1">
-                  <Check className="h-3 w-3" />
-                </div>
-              )}
-              <Icon className="h-5 w-5 mb-1" />
-              <span>{method.name}</span>
-            </button>
-          )
-        })}
-      </div>
+        return (
+          <button
+            key={method.id}
+            type="button"
+            className={cn(
+              "relative flex flex-col items-center justify-center p-3 rounded-lg border text-sm transition-all",
+              "hover:border-primary/50 hover:bg-primary/5",
+              isSelected ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground",
+            )}
+            onClick={() => setPaymentMethod(method.id)}
+          >
+            {isSelected && (
+              <div className="absolute top-1 right-1">
+                <Check className="h-3 w-3" />
+              </div>
+            )}
+            <Icon className="h-5 w-5 mb-1" />
+            <span>{method.name}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

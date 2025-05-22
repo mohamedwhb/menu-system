@@ -1,7 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { format } from "date-fns"
 import { de } from "date-fns/locale"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import { ReceiptPdfGenerator } from "./receipt-pdf-generator"
 
 interface ReceiptItem {
@@ -37,44 +41,125 @@ export function ReceiptDisplay({
   total,
   timestamp,
 }: ReceiptDisplayProps) {
+  const [showDetails, setShowDetails] = useState(false)
+
   // Formatierungsfunktionen
   const formatCurrency = (amount: number) => {
     return amount.toFixed(2).replace(".", ",") + " €"
   }
 
   const formatDate = (date: Date) => {
-    return format(date, "dd. MMMM yyyy, HH:mm 'Uhr'", { locale: de })
+    return format(date, "dd. MMMM yyyy", { locale: de })
+  }
+
+  const formatTime = (date: Date) => {
+    return format(date, "HH:mm 'Uhr'", { locale: de })
+  }
+
+  // Zahlungsmethode formatieren
+  const getPaymentMethodName = (method: string) => {
+    switch (method) {
+      case "card":
+        return "Kreditkarte"
+      case "cash":
+        return "Bargeld"
+      case "paypal":
+        return "PayPal"
+      case "applepay":
+        return "Apple Pay"
+      case "googlepay":
+        return "Google Pay"
+      case "banktransfer":
+        return "Überweisung"
+      default:
+        return method
+    }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-muted p-4 rounded-lg">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-muted-foreground">Bestellnummer:</span>
-          <span className="font-medium">{orderNumber}</span>
-        </div>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-muted-foreground">Datum:</span>
-          <span>{formatDate(new Date(timestamp))}</span>
-        </div>
-        {tableId && (
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-muted-foreground">Tisch:</span>
-            <span>{tableId}</span>
+    <Card className="border-2 border-muted">
+      <CardHeader className="bg-muted/20 pb-2">
+        <CardTitle className="text-lg flex justify-between items-center">
+          <span>Quittung</span>
+          <Button variant="ghost" size="sm" onClick={() => setShowDetails(!showDetails)}>
+            {showDetails ? "Details ausblenden" : "Details anzeigen"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {showDetails ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <p className="text-muted-foreground">Bestellnummer</p>
+                <p className="font-medium">{orderNumber}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Datum</p>
+                <p className="font-medium">{formatDate(new Date(timestamp))}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Uhrzeit</p>
+                <p className="font-medium">{formatTime(new Date(timestamp))}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Tisch</p>
+                <p className="font-medium">{tableId || "Nicht angegeben"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Zahlungsmethode</p>
+                <p className="font-medium">{getPaymentMethodName(paymentMethod)}</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <p className="font-medium">Artikel</p>
+              {items.map((item) => (
+                <div key={`${item.id}-${item.guestId || "self"}`} className="flex justify-between text-sm">
+                  <div>
+                    <span>
+                      {item.quantity}x {item.name}
+                    </span>
+                    {item.guestId && item.guestName && (
+                      <span className="text-xs text-muted-foreground ml-2">({item.guestName})</span>
+                    )}
+                  </div>
+                  <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                </div>
+              ))}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Zwischensumme</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {tipAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Trinkgeld</span>
+                  <span>{formatCurrency(tipAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-medium">
+                <span>Gesamtbetrag</span>
+                <span>{formatCurrency(total)}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-2">
+            <p className="font-medium">Bestellnummer: {orderNumber}</p>
+            <p className="text-sm text-muted-foreground">
+              {formatDate(new Date(timestamp))}, {formatTime(new Date(timestamp))}
+            </p>
+            <p className="font-medium mt-2">Gesamtbetrag: {formatCurrency(total)}</p>
           </div>
         )}
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-muted-foreground">Zahlungsmethode:</span>
-          <span className="capitalize">{paymentMethod === "card" ? "Karte" : paymentMethod}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Gesamtbetrag:</span>
-          <span className="font-bold">{formatCurrency(total)}</span>
-        </div>
-      </div>
 
-      <div className="border rounded-lg p-4">
-        <h3 className="font-medium mb-3">Quittung</h3>
         <ReceiptPdfGenerator
           items={items}
           orderNumber={orderNumber}
@@ -84,8 +169,9 @@ export function ReceiptDisplay({
           tipAmount={tipAmount}
           total={total}
           timestamp={timestamp}
+          showIconsOnly={!showDetails}
         />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

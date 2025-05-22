@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AlertCircle, Loader2, Percent, Tag, Clock, CreditCard, Banknote } from "lucide-react"
+import { AlertCircle, Loader2, Percent, Tag, Clock } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
 import { PaymentMethodSelector } from "@/components/cart/payment-method-selector"
@@ -10,7 +10,7 @@ import { TipSelector } from "@/components/cart/tip-selector"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { TableIdSelector } from "./table-id-selector"
 import { Input } from "@/components/ui/input"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Accordion, AccordionContent, AccordionItem } from "@/components/ui/accordion"
 
 export function CartSummary() {
   const {
@@ -199,45 +199,9 @@ export function CartSummary() {
           </div>
         </div>
 
-        {/* Payment methods quick select */}
-        {!showDetails && (
-          <div className="mb-4">
-            <p className="text-sm text-muted-foreground mb-2">Schnelle Zahlungsauswahl:</p>
-            <div className="flex gap-2 flex-wrap">
-              {["card", "paypal", "applepay", "cash"].map((method) => (
-                <Button
-                  key={method}
-                  variant={paymentMethod === method ? "default" : "outline"}
-                  size="sm"
-                  className="h-9 flex-1"
-                  onClick={() => setPaymentMethod(method as any)}
-                >
-                  {method === "cash" ? (
-                    <Banknote className="h-3.5 w-3.5 mr-1.5" />
-                  ) : (
-                    <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                  )}
-                  {method === "card"
-                    ? "Karte"
-                    : method === "paypal"
-                      ? "PayPal"
-                      : method === "applepay"
-                        ? "Apple Pay"
-                        : method === "cash"
-                          ? "Bar"
-                          : method}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Accordion for order details */}
         <Accordion type="single" collapsible className="mb-4">
           <AccordionItem value="details" className="border-b-0">
-            <AccordionTrigger className="py-2 text-sm">
-              Bestelldetails {expandedSection === "details" ? "ausblenden" : "anzeigen"}
-            </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 py-2">
                 <TableIdSelector />

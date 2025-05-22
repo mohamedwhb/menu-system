@@ -1,11 +1,5 @@
 export const categories = [
   {
-    id: "all",
-    name: "Alle Gerichte",
-    order: 0,
-    active: true,
-  },
-  {
     id: "starters",
     name: "Vorspeisen",
     description: "Kleine Gerichte zum Teilen",

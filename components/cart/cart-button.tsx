@@ -13,7 +13,7 @@ import { useCart } from "@/contexts/cart-context"
 export function CartButton() {
   const { toggleCart, itemCount, kitchenItemCount, paidItemCount, tableId, tableVerified } = useCart()
 
-  const totalCount = itemCount + kitchenItemCount + paidItemCount
+  const totalCount = itemCount + kitchenItemCount
 
   return (
     <Button onClick={toggleCart} variant="outline" size="icon" className="relative" aria-label="Warenkorb öffnen">

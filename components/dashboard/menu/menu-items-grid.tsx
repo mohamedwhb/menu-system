@@ -91,7 +91,17 @@ export function MenuItemsGrid({ items }: MenuItemsGridProps) {
                 </div>
 
                 {item.image ? (
-                  <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                  <Image
+                    src={item.image || "/placeholder.svg?height=192&width=384&query=food"}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    onError={(e) => {
+                      // Fallback to placeholder if image fails to load
+                      const target = e.target as HTMLImageElement
+                      target.src = "/diverse-food-spread.png"
+                    }}
+                  />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
                     Kein Bild

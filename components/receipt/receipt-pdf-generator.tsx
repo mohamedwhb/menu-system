@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react"
 import { jsPDF } from "jspdf"
 import { Button } from "@/components/ui/button"
-import { FileDown, Loader2, Printer, Eye } from "lucide-react"
+import { FileDown, Download, Eye } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { format } from "date-fns"
 import { de } from "date-fns/locale"
 import { toDataURL } from "qrcode"
+import { toast } from "@/hooks/use-toast"
 
 interface ReceiptItem {
   id: string
@@ -30,6 +31,7 @@ interface ReceiptPdfGeneratorProps {
   tipAmount: number
   total: number
   timestamp: number
+  showIconsOnly?: boolean
 }
 
 export function ReceiptPdfGenerator({
@@ -41,6 +43,7 @@ export function ReceiptPdfGenerator({
   tipAmount,
   total,
   timestamp,
+  showIconsOnly = false,
 }: ReceiptPdfGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -105,11 +108,14 @@ export function ReceiptPdfGenerator({
       }
 
       // Steuerberechnung
+      const taxRate = 0.19 // 19% MwSt
+      const netAmount = subtotal / (1 + taxRate)
+      const taxAmount = subtotal - netAmount
       const taxBreakdown = [
         {
-          rate: 20,
-          netAmount: subtotal / 1.2,
-          taxAmount: subtotal - subtotal / 1.2,
+          rate: 19,
+          netAmount: netAmount,
+          taxAmount: taxAmount,
           grossAmount: subtotal,
         },
       ]
@@ -245,20 +251,18 @@ export function ReceiptPdfGenerator({
       }
 
       // Steueraufschlüsselung
-      taxBreakdown.forEach((tax) => {
-        doc.setFontSize(7)
-        doc.text(`Netto ${tax.rate}%:`, margin, y)
-        doc.text(formatCurrency(tax.netAmount), pageWidth - margin, y, { align: "right" })
-        y += 3
-        doc.text(`MwSt. ${tax.rate}%:`, margin, y)
-        doc.text(formatCurrency(tax.taxAmount), pageWidth - margin, y, { align: "right" })
-        y += 3
-        doc.setFontSize(8)
-      })
+      doc.setFontSize(7)
+      doc.text(`Netto ${taxBreakdown[0].rate}%:`, margin, y)
+      doc.text(formatCurrency(netAmount), pageWidth - margin, y, { align: "right" })
+      y += 3
+      doc.text(`MwSt. ${taxBreakdown[0].rate}%:`, margin, y)
+      doc.text(formatCurrency(taxAmount), pageWidth - margin, y, { align: "right" })
+      y += 3
+      doc.setFontSize(8)
 
-      // Gesamtsumme
+      // Gesamtsumme (inkl. Trinkgeld)
       doc.setFont("helvetica", "bold")
-      doc.text("Gesamtsumme:", margin, y)
+      doc.text("Gesamtbetrag:", margin, y)
       doc.text(formatCurrency(total), pageWidth - margin, y, { align: "right" })
       y += 5
 
@@ -270,7 +274,21 @@ export function ReceiptPdfGenerator({
       // Zahlungsinformationen
       doc.setFont("helvetica", "normal")
       doc.text("Zahlungsart:", margin, y)
-      doc.text(paymentMethod === "card" ? "Karte" : paymentMethod, pageWidth - margin, y, { align: "right" })
+      const paymentMethodText =
+        paymentMethod === "card"
+          ? "Karte"
+          : paymentMethod === "cash"
+            ? "Bargeld"
+            : paymentMethod === "paypal"
+              ? "PayPal"
+              : paymentMethod === "applepay"
+                ? "Apple Pay"
+                : paymentMethod === "googlepay"
+                  ? "Google Pay"
+                  : paymentMethod === "banktransfer"
+                    ? "Überweisung"
+                    : paymentMethod
+      doc.text(paymentMethodText, pageWidth - margin, y, { align: "right" })
       y += 4
       doc.text("Bezahlt:", margin, y)
       doc.text(formatCurrency(total), pageWidth - margin, y, { align: "right" })
@@ -326,6 +344,11 @@ export function ReceiptPdfGenerator({
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      toast({
+        title: "PDF heruntergeladen",
+        description: `Die Quittung für Bestellung ${orderNumber} wurde heruntergeladen.`,
+      })
     }
   }
 
@@ -351,25 +374,16 @@ export function ReceiptPdfGenerator({
     }
   }, [pdfUrl])
 
+  const handleDownload = async () => {
+    await downloadPdf()
+  }
+
+  const handlePrint = () => {
+    window.print()
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button variant="outline" className="flex-1" onClick={downloadPdf} disabled={isGenerating}>
-          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-          PDF herunterladen
-        </Button>
-
-        <Button variant="outline" className="flex-1" onClick={previewPdf} disabled={isGenerating}>
-          <Eye className="mr-2 h-4 w-4" />
-          PDF anzeigen
-        </Button>
-
-        <Button variant="outline" className="flex-1" onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Drucken
-        </Button>
-      </div>
-
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-3xl h-[80vh]">
           <DialogHeader>
@@ -391,6 +405,18 @@ export function ReceiptPdfGenerator({
           </div>
         </DialogContent>
       </Dialog>
+      <div className="flex justify-end space-x-2 mt-4">
+        <Button onClick={previewPdf} size="sm" variant="outline" className="flex items-center">
+          <Eye className="h-4 w-4 mr-2" />
+          {!showIconsOnly && "Quittung anzeigen"}
+          {showIconsOnly && "Anzeigen"}
+        </Button>
+        <Button onClick={downloadPdf} size="sm" variant="outline" className="flex items-center">
+          <Download className="h-4 w-4 mr-2" />
+          {!showIconsOnly && "PDF herunterladen"}
+          {showIconsOnly && "PDF"}
+        </Button>
+      </div>
     </div>
   )
 }

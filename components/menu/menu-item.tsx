@@ -88,11 +88,16 @@ export function MenuItem({
       {imageUrl && (
         <div className="sm:w-24 sm:h-24 h-32 relative rounded-md overflow-hidden flex-shrink-0">
           <Image
-            src={imageUrl || "/placeholder.svg"}
+            src={imageUrl || "/placeholder.svg?height=96&width=96&query=food"}
             alt={name}
             fill
             className={cn("object-cover transition-transform duration-300", isHovered && "scale-110")}
             sizes="(max-width: 768px) 100vw, 96px"
+            onError={(e) => {
+              // Fallback to placeholder if image fails to load
+              const target = e.target as HTMLImageElement
+              target.src = "/diverse-food-spread.png"
+            }}
           />
         </div>
       )}

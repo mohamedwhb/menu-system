@@ -83,6 +83,7 @@ interface CartContextType {
   completePayment: (paymentDetails?: any) => void
   cancelPayment: () => void
   getItemsForPayment: () => CartItem[]
+  getTipPercentage: () => number
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -96,7 +97,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [tableVerified, setTableVerified] = useState(false)
   const [splitMethod, setSplitMethod] = useState<"items" | "equal">("items")
   const [guestSplits, setGuestSplits] = useState<GuestSplit[]>([])
-  const [tipOption, setTipOption] = useState<TipOption>(0)
+  const [tipOptionState, setTipOptionState] = useState<TipOption>(0)
   const [customTipAmount, setCustomTipAmount] = useState(0)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
@@ -117,12 +118,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     .filter((item) => item.status === "cart" && item.selected !== false) // If selected is undefined or true, include it
     .reduce((total, item) => total + item.price * item.quantity, 0)
 
-  // Calculate tip amount based on selected option
-  const tipAmount = tipOption === "custom" ? customTipAmount : totalPrice * (tipOption / 100)
+  // Berechne den Trinkgeldbetrag basierend auf der gewählten Option
+  const calculateTipAmount = () => {
+    if (tipOptionState === "custom") {
+      return customTipAmount
+    } else if (tipOptionState === 0) {
+      return 0
+    } else {
+      return totalPrice * (tipOptionState / 100)
+    }
+  }
+
+  // Aktualisiere die tipAmount-Berechnung
+  const tipAmount = calculateTipAmount()
+
+  const validateTipPercentage = (percentage: number): boolean => {
+    return percentage >= 0 && percentage <= 50 // Maximal 50% Trinkgeld
+  }
+
+  const setTipOption = (option: TipOption) => {
+    if (typeof option === "number" && option > 0) {
+      if (validateTipPercentage(option)) {
+        setTipOptionState(option)
+      }
+    } else {
+      setTipOptionState(option)
+    }
+  }
 
   // Get total with tip
   const getTotalWithTip = () => {
-    return totalPrice + tipAmount
+    const calculatedTipAmount = calculateTipAmount()
+    return totalPrice + calculatedTipAmount
+  }
+
+  const getTipPercentage = (): number => {
+    if (tipOptionState === "custom") {
+      return totalPrice > 0 ? (customTipAmount / totalPrice) * 100 : 0
+    } else if (typeof tipOptionState === "number") {
+      return tipOptionState
+    }
+    return 0
   }
 
   // Load cart from localStorage on mount (client-side only)
@@ -147,7 +183,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setTableVerified(parsedCart.tableVerified || false)
         setSplitMethod(parsedCart.splitMethod || "items")
         setGuestSplits(parsedCart.guestSplits || [])
-        setTipOption(parsedCart.tipOption || 0)
+        setTipOptionState(parsedCart.tipOption || 0)
         setCustomTipAmount(parsedCart.customTipAmount || 0)
       }
 
@@ -177,7 +213,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           tableVerified,
           splitMethod,
           guestSplits,
-          tipOption,
+          tipOption: tipOptionState,
           customTipAmount,
         }),
       )
@@ -200,7 +236,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     tableVerified,
     splitMethod,
     guestSplits,
-    tipOption,
+    tipOptionState,
     customTipAmount,
   ])
 
@@ -328,7 +364,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((currentItems) => currentItems.filter((item) => item.status !== "cart"))
     setPaymentMethod(null)
     setSpecialInstructions("")
-    setTipOption(0)
+    setTipOptionState(0)
     setCustomTipAmount(0)
     // Note: We don't clear tableId when clearing the cart
   }
@@ -477,6 +513,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Send items to kitchen
   const sendItemsToKitchen = () => {
+    // Ensure we have items to send
+    const cartItemsToSend = items.filter((item) => item.status === "cart")
+
+    if (cartItemsToSend.length === 0) {
+      return // No items to send
+    }
+
     setItems((currentItems) => {
       return currentItems.map((item) => {
         if (item.status === "cart") {
@@ -489,6 +532,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return item
       })
     })
+
+    // Log for debugging
+    console.log("Items sent to kitchen:", cartItemsToSend.length)
   }
 
   // Mark items as paid
@@ -587,7 +633,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         tableVerified,
         splitMethod,
         guestSplits,
-        tipOption,
+        tipOption: tipOptionState,
         tipAmount,
         customTipAmount,
         addItem,
@@ -626,6 +672,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         completePayment,
         cancelPayment,
         getItemsForPayment,
+        getTipPercentage,
       }}
     >
       {children}

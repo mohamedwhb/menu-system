@@ -73,128 +73,115 @@ export function GroupOrderSection() {
 
   return (
     <div className="space-y-4">
-      {/* Table ID section */}
-      <div
-        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="font-medium">Bestellungen für Tisch {tableId}</div>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-      </div>
-
       {/* Expanded content */}
-      {isExpanded && (
-        <div className="space-y-4 animate-in fade-in-50 duration-200">
-          {/* Info text */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground italic">Nur Bestellungen von Tisch {tableId} sichtbar.</p>
-            <p className="text-xs font-medium">
-              Gesamt: <span className="text-primary">{totalAmount.toFixed(2)} €</span>
-            </p>
-          </div>
+      <div className="space-y-4">
+        {/* Info text */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground italic">Nur Bestellungen von Tisch {tableId} sichtbar.</p>
+          <p className="text-xs font-medium">
+            Gesamt: <span className="text-primary">{totalAmount.toFixed(2)} €</span>
+          </p>
+        </div>
 
-          {/* Tabs for different splitting methods */}
-          <Tabs
-            defaultValue="items"
-            value={splitMethod}
-            onValueChange={(value) => setSplitMethod(value as "items" | "equal")}
-            className="w-full"
-          >
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <TabsTrigger value="items" className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Artikel auswählen</span>
-                      <span className="sm:hidden">Artikel</span>
-                    </TabsTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Wählen Sie einzelne Artikel für jeden Gast aus</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+        {/* Tabs for different splitting methods */}
+        <Tabs
+          defaultValue="items"
+          value={splitMethod}
+          onValueChange={(value) => setSplitMethod(value as "items" | "equal")}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-2 mb-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="items" className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Artikel auswählen</span>
+                    <span className="sm:hidden">Artikel</span>
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Wählen Sie einzelne Artikel für jeden Gast aus</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <TabsTrigger value="equal" className="flex items-center gap-1.5">
-                      <DivideSquare className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Gleichmäßig teilen</span>
-                      <span className="sm:hidden">Gleich</span>
-                    </TabsTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Teilen Sie die Rechnung gleichmäßig auf</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </TabsList>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="equal" className="flex items-center gap-1.5">
+                    <DivideSquare className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Gleichmäßig teilen</span>
+                    <span className="sm:hidden">Gleich</span>
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Teilen Sie die Rechnung gleichmäßig auf</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </TabsList>
 
-            <TabsContent value="items" className="space-y-4">
-              {/* Selected items summary */}
-              <div className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="select-all" checked={allSelected} onCheckedChange={handleToggleAll} />
-                  <label
-                    htmlFor="select-all"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Alle Artikel auswählen
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-xs">
-                    <span className="font-medium">{selectedTotal.toFixed(2)} €</span>
-                    <span className="text-muted-foreground"> ({selectedPercentage.toFixed(0)}%)</span>
-                  </div>
-                  <Badge variant={selectedTotal > 0 ? "default" : "outline"} className="text-xs">
-                    {selectedTotal > 0 ? "Ausgewählt" : "Nichts ausgewählt"}
-                  </Badge>
-                </div>
+          <TabsContent value="items" className="space-y-4">
+            {/* Selected items summary */}
+            <div className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="select-all" checked={allSelected} onCheckedChange={handleToggleAll} />
+                <label
+                  htmlFor="select-all"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Alle Artikel auswählen
+                </label>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs">
+                  <span className="font-medium">{selectedTotal.toFixed(2)} €</span>
+                  <span className="text-muted-foreground"> ({selectedPercentage.toFixed(0)}%)</span>
+                </div>
+                <Badge variant={selectedTotal > 0 ? "default" : "outline"} className="text-xs">
+                  {selectedTotal > 0 ? "Ausgewählt" : "Nichts ausgewählt"}
+                </Badge>
+              </div>
+            </div>
 
-              {/* Items with no guest assigned (individual orders) */}
-              {hasNoGuestItems && (
+            {/* Items with no guest assigned (individual orders) */}
+            {hasNoGuestItems && (
+              <GuestOrderCard
+                title="Ihre Bestellung"
+                items={items.filter((item) => !item.guestId)}
+                toggleItemSelection={toggleItemSelection}
+                guestId="self"
+                checkboxRef={(el) => {
+                  checkboxRefs.current[`guest-self`] = el
+                }}
+              />
+            )}
+
+            {/* Guest orders */}
+            {guestIds &&
+              guestIds.map((guestId) => (
                 <GuestOrderCard
-                  title="Ihre Bestellung"
-                  items={items.filter((item) => !item.guestId)}
+                  key={guestId}
+                  title={getGuestName(guestId)}
+                  items={getItemsByGuest(guestId)}
                   toggleItemSelection={toggleItemSelection}
-                  guestId="self"
+                  guestId={guestId}
                   checkboxRef={(el) => {
-                    checkboxRefs.current[`guest-self`] = el
+                    checkboxRefs.current[`guest-${guestId}`] = el
                   }}
                 />
-              )}
+              ))}
 
-              {/* Guest orders */}
-              {guestIds &&
-                guestIds.map((guestId) => (
-                  <GuestOrderCard
-                    key={guestId}
-                    title={getGuestName(guestId)}
-                    items={getItemsByGuest(guestId)}
-                    toggleItemSelection={toggleItemSelection}
-                    guestId={guestId}
-                    checkboxRef={(el) => {
-                      checkboxRefs.current[`guest-${guestId}`] = el
-                    }}
-                  />
-                ))}
+            {/* Group action buttons */}
+            <div className="flex gap-2 pt-2">{/* Buttons wurden entfernt */}</div>
+          </TabsContent>
 
-              {/* Group action buttons */}
-              <div className="flex gap-2 pt-2">{/* Buttons wurden entfernt */}</div>
-            </TabsContent>
-
-            <TabsContent value="equal" className="space-y-4">
-              <BillSplitter splitType="equal" />
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
+          <TabsContent value="equal" className="space-y-4">
+            <BillSplitter splitType="equal" />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
