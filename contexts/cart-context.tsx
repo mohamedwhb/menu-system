@@ -132,11 +132,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Aktualisiere die tipAmount-Berechnung
   const tipAmount = calculateTipAmount()
 
+  // Debug output
+  useEffect(() => {
+    console.log("Cart context state:", {
+      totalPrice,
+      tipOptionState,
+      tipAmount,
+      customTipAmount,
+      itemCount,
+    })
+  }, [totalPrice, tipOptionState, tipAmount, customTipAmount, itemCount])
+
   const validateTipPercentage = (percentage: number): boolean => {
     return percentage >= 0 && percentage <= 50 // Maximal 50% Trinkgeld
   }
 
   const setTipOption = (option: TipOption) => {
+    console.log("Setting tip option to:", option)
     if (typeof option === "number" && option > 0) {
       if (validateTipPercentage(option)) {
         setTipOptionState(option)

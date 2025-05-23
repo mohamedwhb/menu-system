@@ -23,8 +23,18 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams()
   const source = searchParams.get("source") || "cart"
 
-  const { items, tableId, tableVerified, tipAmount, paymentMethod, markItemsAsPaid, sendItemsToKitchen, tipOption } =
-    useCart()
+  const {
+    items,
+    tableId,
+    tableVerified,
+    tipAmount,
+    paymentMethod,
+    markItemsAsPaid,
+    sendItemsToKitchen,
+    tipOption,
+    totalPrice,
+    customTipAmount,
+  } = useCart()
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentComplete, setPaymentComplete] = useState(false)
@@ -36,14 +46,48 @@ export default function CheckoutPage() {
   const [emailSent, setEmailSent] = useState(false)
   const [showReceiptDetails, setShowReceiptDetails] = useState(false)
 
+  const [paymentSubtotal, setPaymentSubtotal] = useState(0)
+  const [paymentTipAmount, setPaymentTipAmount] = useState(0)
+  const [paymentTotal, setPaymentTotal] = useState(0)
+  const [paidItems, setPaidItems] = useState<any[]>([])
+
   // Get items to pay for based on source
   const itemsToPay =
     source === "kitchen"
       ? items.filter((item) => item.status === "kitchen")
       : items.filter((item) => item.status === "cart")
 
-  const totalAmount = itemsToPay.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const finalAmount = totalAmount + tipAmount
+  // Calculate total amount from items directly
+  const calculateTotalAmount = useCallback(() => {
+    return itemsToPay.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  }, [itemsToPay])
+
+  const [totalAmount, setTotalAmount] = useState(0)
+  const [finalAmount, setFinalAmount] = useState(0)
+
+  // Update totals when items or tipAmount changes
+  useEffect(() => {
+    const calculatedTotal = calculateTotalAmount()
+    setTotalAmount(calculatedTotal)
+
+    // Calculate tip amount based on the checkout total, not cart total
+    let currentTipAmount = 0
+    if (tipOption === "custom") {
+      currentTipAmount = customTipAmount
+    } else if (typeof tipOption === "number" && tipOption > 0) {
+      currentTipAmount = (calculatedTotal * tipOption) / 100
+    }
+
+    setFinalAmount(calculatedTotal + currentTipAmount)
+
+    console.log("Checkout totals updated:", {
+      calculatedTotal,
+      tipOption,
+      currentTipAmount,
+      finalAmount: calculatedTotal + currentTipAmount,
+      itemCount: itemsToPay.length,
+    })
+  }, [itemsToPay, tipOption, customTipAmount, calculateTotalAmount])
 
   // Generate order number
   const generateOrderNumber = useCallback(() => {
@@ -90,6 +134,21 @@ export default function CheckoutPage() {
       return
     }
 
+    // Store payment amounts before processing
+    const currentSubtotal = totalAmount
+    const currentTipAmount =
+      tipOption === "custom"
+        ? customTipAmount
+        : typeof tipOption === "number" && tipOption > 0
+          ? (totalAmount * tipOption) / 100
+          : 0
+    const currentTotal = currentSubtotal + currentTipAmount
+
+    setPaymentSubtotal(currentSubtotal)
+    setPaymentTipAmount(currentTipAmount)
+    setPaymentTotal(currentTotal)
+    setPaidItems([...itemsToPay])
+
     setIsProcessingPayment(true)
 
     try {
@@ -125,7 +184,17 @@ export default function CheckoutPage() {
     } finally {
       setIsProcessingPayment(false)
     }
-  }, [paymentMethod, itemsToPay, orderNumber, sendItemsToKitchen, markItemsAsPaid, source])
+  }, [
+    paymentMethod,
+    itemsToPay,
+    orderNumber,
+    sendItemsToKitchen,
+    markItemsAsPaid,
+    source,
+    totalAmount,
+    tipOption,
+    customTipAmount,
+  ])
 
   // Handle email sending
   const handleSendEmail = useCallback(async () => {
@@ -299,7 +368,7 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Tip Selector */}
-                <TipSelector />
+                <TipSelector checkoutTotal={totalAmount} />
 
                 {/* Payment Method */}
                 <PaymentMethodSelector />
@@ -364,13 +433,13 @@ export default function CheckoutPage() {
                 <CardContent>
                   <ReceiptDisplay
                     orderNumber={orderNumber}
-                    items={itemsToPay}
+                    items={paidItems}
                     tableId={tableId || ""}
                     timestamp={paymentTimestamp}
-                    tipAmount={tipAmount}
+                    tipAmount={paymentTipAmount}
                     paymentMethod={paymentMethod || ""}
-                    subtotal={totalAmount}
-                    total={finalAmount}
+                    subtotal={paymentSubtotal}
+                    total={paymentTotal}
                   />
                 </CardContent>
               )}

@@ -10,15 +10,37 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 
-export function TipSelector() {
-  const { totalPrice, tipOption, tipAmount, customTipAmount, setTipOption, setCustomTipAmount } = useCart()
+export function TipSelector({ checkoutTotal }: { checkoutTotal?: number }) {
+  const {
+    totalPrice: cartTotalPrice,
+    tipOption,
+    tipAmount,
+    customTipAmount,
+    setTipOption,
+    setCustomTipAmount,
+  } = useCart()
+  // Use the checkout total if provided, otherwise fall back to the cart total
+  const totalPrice = checkoutTotal !== undefined ? checkoutTotal : cartTotalPrice
+
   const [customInputValue, setCustomInputValue] = useState("")
   const [customPercentageValue, setCustomPercentageValue] = useState("")
   const [isCustomActive, setIsCustomActive] = useState(false)
   const [inputMode, setInputMode] = useState<"amount" | "percentage">("amount")
+  const [localTipAmount, setLocalTipAmount] = useState(0)
+
+  // Debug log to check values
+  console.log("TipSelector rendering with values:", {
+    checkoutTotal,
+    cartTotalPrice,
+    totalPrice,
+    tipOption,
+    tipAmount,
+    customTipAmount,
+    localTipAmount,
+  })
 
   // Erweiterte Tip-Optionen
-  const tipOptions: TipOption[] = [0, 5, 10, 15, 18, 20, 25]
+  const tipOptions: TipOption[] = [0, 5, 10, 15, 20]
 
   // Berechne Trinkgeldbetrag für Prozentsatz
   const calculateTipAmount = (percentage: number): number => {
@@ -30,6 +52,17 @@ export function TipSelector() {
     return totalPrice > 0 ? (amount / totalPrice) * 100 : 0
   }
 
+  // Calculate and update local tip amount when tipOption or totalPrice changes
+  useEffect(() => {
+    let amount = 0
+    if (tipOption === "custom") {
+      amount = customTipAmount
+    } else if (typeof tipOption === "number" && tipOption > 0) {
+      amount = calculateTipAmount(tipOption)
+    }
+    setLocalTipAmount(amount)
+  }, [tipOption, customTipAmount, totalPrice])
+
   // Update custom input values when customTipAmount changes
   useEffect(() => {
     if (tipOption === "custom" && customTipAmount > 0) {
@@ -40,6 +73,7 @@ export function TipSelector() {
 
   // Handle tip option selection
   const handleTipOptionSelect = (option: TipOption) => {
+    console.log("Selected tip option:", option, "Total price:", totalPrice)
     setTipOption(option)
     setIsCustomActive(option === "custom")
 
@@ -55,7 +89,7 @@ export function TipSelector() {
     setCustomInputValue(value)
 
     const numValue = Number.parseFloat(value)
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= totalPrice * 2) {
+    if (!isNaN(numValue) && numValue >= 0) {
       setCustomTipAmount(numValue)
       setCustomPercentageValue(calculateTipPercentage(numValue).toFixed(1))
     } else if (value === "") {
@@ -108,12 +142,12 @@ export function TipSelector() {
         </h3>
         {tipOption !== 0 && (
           <div className="text-sm text-primary font-medium">
-            +{tipAmount.toFixed(2)} € ({getCurrentTipPercentage().toFixed(1)}%)
+            +{localTipAmount.toFixed(2)} € ({getCurrentTipPercentage().toFixed(1)}%)
           </div>
         )}
       </div>
 
-      {/* Subtotal Display */}
+      {/* Subtotal Display - Make sure it shows the correct total price */}
       <div className="bg-muted/20 p-3 rounded-lg">
         <div className="flex justify-between items-center text-sm">
           <span className="text-muted-foreground">Rechnungsbetrag:</span>
@@ -122,7 +156,7 @@ export function TipSelector() {
       </div>
 
       {/* Percentage Options */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {tipOptions.map((option) => {
           const tipAmountForOption = option > 0 ? calculateTipAmount(option) : 0
           const isSelected = tipOption === option
@@ -198,7 +232,6 @@ export function TipSelector() {
                   id="custom-tip-amount"
                   type="number"
                   min="0"
-                  max={totalPrice * 2}
                   step="0.50"
                   placeholder="0.00"
                   value={customInputValue}
@@ -234,31 +267,29 @@ export function TipSelector() {
       </div>
 
       {/* Result Display */}
-      {tipAmount > 0 && (
-        <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Rechnungsbetrag:</span>
-              <span>{totalPrice.toFixed(2)} €</span>
-            </div>
-            <div className="flex justify-between text-primary">
-              <span>Trinkgeld ({getCurrentTipPercentage().toFixed(1)}%):</span>
-              <span>+{tipAmount.toFixed(2)} €</span>
-            </div>
-            <div className="border-t border-primary/20 pt-2">
-              <div className="flex justify-between font-medium">
-                <span>Gesamtbetrag:</span>
-                <span>{(totalPrice + tipAmount).toFixed(2)} €</span>
-              </div>
+      <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span>Rechnungsbetrag:</span>
+            <span>{totalPrice.toFixed(2)} €</span>
+          </div>
+          <div className="flex justify-between text-primary">
+            <span>Trinkgeld ({getCurrentTipPercentage().toFixed(1)}%):</span>
+            <span>+{localTipAmount.toFixed(2)} €</span>
+          </div>
+          <div className="border-t border-primary/20 pt-2">
+            <div className="flex justify-between font-medium">
+              <span>Gesamtbetrag:</span>
+              <span>{(totalPrice + localTipAmount).toFixed(2)} €</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Tip Guidelines */}
       <div className="text-xs text-center text-muted-foreground space-y-1">
         <p>Trinkgeld ist freiwillig und wird direkt an das Servicepersonal weitergegeben.</p>
-        <p>Übliche Trinkgelder: 10-15% (gut), 18-20% (sehr gut), 25%+ (außergewöhnlich)</p>
+        <p>Übliche Trinkgelder: 10-15% (gut), 18-20% (sehr gut)</p>
       </div>
     </div>
   )

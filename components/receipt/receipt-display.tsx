@@ -41,6 +41,7 @@ export function ReceiptDisplay({
   total,
   timestamp,
 }: ReceiptDisplayProps) {
+  console.log("ReceiptDisplay props:", { items, subtotal, tipAmount, total })
   const [showDetails, setShowDetails] = useState(false)
 
   // Formatierungsfunktionen

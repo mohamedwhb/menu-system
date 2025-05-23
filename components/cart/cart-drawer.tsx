@@ -226,26 +226,26 @@ export function CartDrawer() {
         {/* Scrollable container for the entire cart */}
         <div className="flex flex-col h-full">
           {/* Header - Sticky */}
-          <div className="sticky top-0 z-20 bg-background flex items-center justify-between p-4 border-b">
-            <div className="flex items-center">
-              <ShoppingBag className="h-5 w-5 mr-2 text-primary" />
-              <h2 className="text-lg font-semibold">
+          <div className="sticky top-0 z-20 bg-background flex items-center justify-between p-3 border-b">
+            <div className="flex items-center space-x-2 min-w-0">
+              <ShoppingBag className="h-5 w-5 flex-shrink-0 text-primary" />
+              <h2 className="text-lg font-semibold truncate">
                 {activeTab === "cart" && "Warenkorb"}
                 {activeTab === "kitchen" && "In der Küche"}
                 {activeTab === "paid" && "Bezahlt"}
 
                 {activeTab === "cart" && itemCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 font-normal">
+                  <Badge variant="secondary" className="ml-1 font-normal">
                     {itemCount}
                   </Badge>
                 )}
                 {activeTab === "kitchen" && kitchenItemCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 font-normal">
+                  <Badge variant="secondary" className="ml-1 font-normal">
                     {kitchenItemCount}
                   </Badge>
                 )}
                 {activeTab === "paid" && paidItemCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 font-normal">
+                  <Badge variant="secondary" className="ml-1 font-normal">
                     {paidItemCount}
                   </Badge>
                 )}
@@ -254,7 +254,7 @@ export function CartDrawer() {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "ml-2",
+                    "flex-shrink-0",
                     tableVerified
                       ? "bg-green-50 text-green-700 border-green-200"
                       : "bg-amber-50 text-amber-700 border-amber-200",
@@ -265,22 +265,22 @@ export function CartDrawer() {
                 </Badge>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1 flex-shrink-0 ml-2">
               {activeTab === "cart" && cartItems.length > 0 && (
-                <Button variant="outline" size="sm" onClick={clearCart} className="text-xs h-8">
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                <Button variant="outline" size="sm" onClick={clearCart} className="text-xs h-7 px-2">
+                  <Trash2 className="h-3 w-3 mr-1" />
                   Leeren
                 </Button>
               )}
               {activeTab === "kitchen" && kitchenItems.length > 0 && (
-                <Button variant="outline" size="sm" onClick={clearKitchenItems} className="text-xs h-8">
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                <Button variant="outline" size="sm" onClick={clearKitchenItems} className="text-xs h-7 px-2">
+                  <Trash2 className="h-3 w-3 mr-1" />
                   Leeren
                 </Button>
               )}
               {activeTab === "paid" && paidItems.length > 0 && (
-                <Button variant="outline" size="sm" onClick={clearPaidItems} className="text-xs h-8">
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                <Button variant="outline" size="sm" onClick={clearPaidItems} className="text-xs h-7 px-2">
+                  <Trash2 className="h-3 w-3 mr-1" />
                   Leeren
                 </Button>
               )}
@@ -288,7 +288,7 @@ export function CartDrawer() {
                 variant="ghost"
                 size="icon"
                 onClick={handleClose}
-                className="h-8 w-8"
+                className="h-7 w-7"
                 aria-label="Warenkorb schließen"
               >
                 <X className="h-4 w-4" />
@@ -332,7 +332,7 @@ export function CartDrawer() {
           <div className="flex-1 overflow-y-auto">
             {/* WARENKORB TAB */}
             {activeTab === "cart" && (
-              <div className="p-4">
+              <div className="p-4 pt-8">
                 {cartItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                     <div className="relative mb-6">
@@ -522,7 +522,7 @@ export function CartDrawer() {
 
             {/* KÜCHE TAB */}
             {activeTab === "kitchen" && (
-              <div className="p-4">
+              <div className="p-4 pt-8">
                 {kitchenItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                     <div className="relative mb-6">
@@ -647,7 +647,7 @@ export function CartDrawer() {
 
             {/* BEZAHLT TAB */}
             {activeTab === "paid" && (
-              <div className="p-4">
+              <div className="p-4 pt-8">
                 {paidItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                     <div className="relative mb-6">
