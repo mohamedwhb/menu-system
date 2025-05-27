@@ -17,6 +17,7 @@ import {
   Clock,
   Receipt,
   CreditCardIcon,
+  Users,
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
 import { de } from "date-fns/locale"
 import { Separator } from "@/components/ui/separator"
+import { OtherOrdersDialog } from "@/components/cart/other-orders-dialog"
+import type { CartItem } from "@/types"
+import { Textarea } from "@/components/ui/textarea"
 
 export function CartDrawer() {
   const router = useRouter()
@@ -56,6 +60,8 @@ export function CartDrawer() {
     paymentMethod,
     setPaymentMethod,
     completePayment,
+    addTakenOverItems,
+    updateItemNotes,
   } = useCart()
 
   const [isSendingToKitchen, setIsSendingToKitchen] = useState(false)
@@ -66,6 +72,7 @@ export function CartDrawer() {
   const [orderNumber, setOrderNumber] = useState("")
   const [paymentTimestamp, setPaymentTimestamp] = useState<number>(0)
   const [paymentComplete, setPaymentComplete] = useState(false)
+  const [showOtherOrdersDialog, setShowOtherOrdersDialog] = useState(false)
 
   // Get items for each tab
   const cartItems = items.filter((item) => item.status === "cart")
@@ -187,6 +194,21 @@ export function CartDrawer() {
     router.push("/checkout?source=kitchen")
   }, [kitchenItems.length, handleClose, router])
 
+  // Handle taking over other orders
+  const handleTakeOverOrders = useCallback(
+    (cartItems: CartItem[]) => {
+      // Add the taken over items to the cart
+      addTakenOverItems(cartItems)
+
+      toast({
+        title: "Bestellungen übernommen",
+        description: `${cartItems.length} Artikel von anderen Gästen wurden zu Ihrer Rechnung hinzugefügt.`,
+        duration: 3000,
+      })
+    },
+    [addTakenOverItems, toast],
+  )
+
   // Format timestamp to readable date
   const formatTimestamp = (timestamp?: number) => {
     if (!timestamp) return ""
@@ -268,12 +290,6 @@ export function CartDrawer() {
             <div className="flex gap-1 flex-shrink-0 ml-2">
               {activeTab === "cart" && cartItems.length > 0 && (
                 <Button variant="outline" size="sm" onClick={clearCart} className="text-xs h-7 px-2">
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Leeren
-                </Button>
-              )}
-              {activeTab === "kitchen" && kitchenItems.length > 0 && (
-                <Button variant="outline" size="sm" onClick={clearKitchenItems} className="text-xs h-7 px-2">
                   <Trash2 className="h-3 w-3 mr-1" />
                   Leeren
                 </Button>
@@ -447,6 +463,16 @@ export function CartDrawer() {
                                   <p className="text-xs text-muted-foreground mt-0.5 italic">"{item.notes}"</p>
                                 )}
 
+                                {/* Notes input */}
+                                <div className="mt-2">
+                                  <Textarea
+                                    placeholder="Notizen zum Artikel (z.B. ohne Zwiebeln, extra scharf...)"
+                                    className="text-xs min-h-[60px] resize-none"
+                                    value={item.notes || ""}
+                                    onChange={(e) => updateItemNotes(item.id, e.target.value, item.guestId)}
+                                  />
+                                </div>
+
                                 {/* Price and quantity controls */}
                                 <div className="flex items-center justify-between mt-2">
                                   <div className="flex items-center gap-2 bg-muted/30 rounded-full p-1">
@@ -603,12 +629,34 @@ export function CartDrawer() {
                     </div>
 
                     {/* Payment section */}
-                    <div className="bg-muted/10 rounded-xl p-4 border">
+                    <div className="space-y-4">
+                      {/* Take over other orders button */}
+                      <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="font-medium text-sm">Andere Bestellungen</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Übernehmen Sie Bestellungen anderer Gäste an Tisch {tableId}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowOtherOrdersDialog(true)}
+                          className="w-full h-10 border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-900"
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Bestellungen für andere übernehmen
+                        </Button>
+                      </div>
+
                       {/* Order summary */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between font-medium">
-                          <span>Gesamtbetrag</span>
-                          <span className="text-lg">{kitchenTotal.toFixed(2)} €</span>
+                      <div className="bg-muted/10 rounded-xl p-4 border">
+                        <div className="space-y-2">
+                          <div className="flex justify-between font-medium">
+                            <span>Gesamtbetrag</span>
+                            <span className="text-lg">{kitchenTotal.toFixed(2)} €</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -756,6 +804,14 @@ export function CartDrawer() {
           </div>
         </div>
       </div>
+
+      {/* Other Orders Dialog */}
+      <OtherOrdersDialog
+        isOpen={showOtherOrdersDialog}
+        onClose={() => setShowOtherOrdersDialog(false)}
+        tableId={tableId}
+        onTakeOverOrders={handleTakeOverOrders}
+      />
 
       {/* Verification Dialog */}
       <TableVerificationDialog

@@ -34,7 +34,6 @@ export default function ReceiptPage() {
   const [order, setOrder] = useState<any>(null)
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
   const [emailAddress, setEmailAddress] = useState("")
-  const [emailStatus, setEmailStatus] = useState<null | 'success' | 'error' | 'loading'>(null)
 
   useEffect(() => {
     if (params.id) {
@@ -69,28 +68,13 @@ export default function ReceiptPage() {
     alert(`Bestellung ${order.id} wird als ${format.toUpperCase()} exportiert.`)
   }
 
-  async function handleSendEmail() {
+  function handleSendEmail() {
     if (!order || !emailAddress) return
-    setEmailStatus('loading')
-    try {
-      const res = await fetch('/api/send-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailAddress, receiptData }),
-      })
-      if (res.ok) {
-        setEmailStatus('success')
-        setTimeout(() => {
-          setIsEmailDialogOpen(false)
-          setEmailAddress("")
-          setEmailStatus(null)
-        }, 2000)
-      } else {
-        setEmailStatus('error')
-      }
-    } catch {
-      setEmailStatus('error')
-    }
+
+    // In a real app, this would send an actual email
+    alert(`Beleg für Bestellung ${order.id} wurde an ${emailAddress} gesendet.`)
+    setIsEmailDialogOpen(false)
+    setEmailAddress("")
   }
 
   function handleShare() {
@@ -256,16 +240,10 @@ export default function ReceiptPage() {
             <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
               Abbrechen
             </Button>
-            <Button onClick={handleSendEmail} disabled={!emailAddress || emailStatus === 'loading'}>
-              {emailStatus === 'loading' ? 'Sende...' : 'Senden'}
+            <Button onClick={handleSendEmail} disabled={!emailAddress}>
+              Senden
             </Button>
           </DialogFooter>
-          {emailStatus === 'success' && (
-            <div className="text-green-600 text-sm flex items-center mt-2">E-Mail erfolgreich gesendet</div>
-          )}
-          {emailStatus === 'error' && (
-            <div className="text-red-600 text-sm flex items-center mt-2">Fehler beim Senden der E-Mail</div>
-          )}
         </DialogContent>
       </Dialog>
     </div>

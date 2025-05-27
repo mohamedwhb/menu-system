@@ -10,6 +10,7 @@ import PaymentTab from "@/components/dashboard/settings/tabs/payment-tab"
 import OrderLogicTab from "@/components/dashboard/settings/tabs/order-logic-tab"
 import PrivacyTab from "@/components/dashboard/settings/tabs/privacy-tab"
 import UserManagementTab from "@/components/dashboard/settings/tabs/user-management-tab"
+import FinanzOnlineTab from "@/components/dashboard/settings/tabs/finanzonline-tab"
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general")
@@ -29,6 +30,9 @@ export default function SettingsPage() {
             </TabsTrigger>
             <TabsTrigger value="receipt" className="px-4 py-2">
               Kasse & Beleg
+            </TabsTrigger>
+            <TabsTrigger value="finanzonline" className="px-4 py-2">
+              FinanzOnline
             </TabsTrigger>
             <TabsTrigger value="payment" className="px-4 py-2">
               Zahlung
@@ -55,6 +59,10 @@ export default function SettingsPage() {
 
         <TabsContent value="receipt" className="mt-6">
           <ReceiptTab />
+        </TabsContent>
+
+        <TabsContent value="finanzonline" className="mt-6">
+          <FinanzOnlineTab />
         </TabsContent>
 
         <TabsContent value="payment" className="mt-6">

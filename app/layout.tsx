@@ -4,7 +4,10 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { CartProvider } from "@/contexts/cart-context"
 import { MenuProvider } from "@/contexts/menu-context"
+import { QRCodesProvider } from "@/contexts/qr-codes-context"
+import { OrdersProvider } from "@/contexts/orders-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,9 +26,16 @@ export default function RootLayout({
     <html lang="de">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light">
-          <MenuProvider>
-            <CartProvider>{children}</CartProvider>
-          </MenuProvider>
+          <QRCodesProvider>
+            <MenuProvider>
+              <OrdersProvider>
+                <CartProvider>
+                  {children}
+                  <Toaster />
+                </CartProvider>
+              </OrdersProvider>
+            </MenuProvider>
+          </QRCodesProvider>
         </ThemeProvider>
       </body>
     </html>

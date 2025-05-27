@@ -1,9 +1,16 @@
+"use client"
+
 import Link from "next/link"
 import { InfoIcon as InfoCircle } from "lucide-react"
+import { useQRCodes } from "@/contexts/qr-codes-context"
 
 export default function Home() {
-  // Array of table numbers
-  const tables = [1, 2, 3, 4, 5, 6]
+  const { qrCodes } = useQRCodes()
+
+  // Filter only active QR codes and sort by table number
+  const activeQRCodes = qrCodes
+    .filter((qr) => qr.active)
+    .sort((a, b) => Number.parseInt(a.tableNumber) - Number.parseInt(b.tableNumber))
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-6xl">
@@ -20,10 +27,10 @@ export default function Home() {
 
       {/* QR Code Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tables.map((tableNumber) => (
+        {activeQRCodes.map((qrCode) => (
           <Link
-            href={`/menu-example?tisch=${tableNumber}`}
-            key={tableNumber}
+            href={`/menu-example?tisch=${qrCode.tableNumber}`}
+            key={qrCode.id}
             className="block bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6 text-center border border-gray-100 hover:border-blue-100"
           >
             {/* QR Code Simulation */}
@@ -54,11 +61,26 @@ export default function Home() {
             </div>
 
             {/* Table Label */}
-            <h2 className="text-xl font-medium text-gray-800">Tisch {tableNumber}</h2>
+            <h2 className="text-xl font-medium text-gray-800">
+              Tisch {qrCode.tableNumber}
+              {qrCode.tableName && (
+                <span className="block text-sm text-gray-500 font-normal mt-1">{qrCode.tableName}</span>
+              )}
+            </h2>
             <p className="text-sm text-gray-500 mt-2">Klicken zum Bestellen</p>
           </Link>
         ))}
       </div>
+
+      {/* No QR Codes Message */}
+      {activeQRCodes.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">Keine aktiven QR-Codes gefunden.</p>
+          <Link href="/dashboard/qr-codes" className="text-blue-600 hover:text-blue-800 underline">
+            QR-Codes im Dashboard erstellen
+          </Link>
+        </div>
+      )}
     </main>
   )
 }

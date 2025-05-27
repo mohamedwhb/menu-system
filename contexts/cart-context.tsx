@@ -84,6 +84,7 @@ interface CartContextType {
   cancelPayment: () => void
   getItemsForPayment: () => CartItem[]
   getTipPercentage: () => number
+  addTakenOverItems: (items: CartItem[]) => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -629,6 +630,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return items.filter((item) => item.status === "kitchen")
   }
 
+  const addTakenOverItems = (newItems: CartItem[]) => {
+    setItems((currentItems) => {
+      // Add the taken over items with kitchen status and current timestamp
+      const itemsWithKitchenStatus = newItems.map((item) => ({
+        ...item,
+        status: "kitchen" as ItemStatus,
+        timestamp: Date.now(),
+        guestName: item.guestName || `Übernommen: ${item.guestId}`,
+      }))
+
+      return [...currentItems, ...itemsWithKitchenStatus]
+    })
+  }
+
   return (
     <CartContext.Provider
       value={{
@@ -685,6 +700,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cancelPayment,
         getItemsForPayment,
         getTipPercentage,
+        addTakenOverItems,
       }}
     >
       {children}

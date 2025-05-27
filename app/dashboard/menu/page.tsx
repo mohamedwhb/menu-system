@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
-import { PlusCircle, Search, Filter, ArrowUpDown, Grid, List, Download, Upload } from "lucide-react"
+import React from "react"
+
+import { useState, useMemo, useCallback, useTransition } from "react"
+import { PlusCircle, Search, Filter, ArrowUpDown, Grid, List, Download, Upload, Loader2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import { MenuItemsGrid } from "@/components/dashboard/menu/menu-items-grid"
 import { MenuItemsTable } from "@/components/dashboard/menu/menu-items-table"
@@ -21,17 +24,45 @@ import { MenuCategories } from "@/components/dashboard/menu/menu-categories"
 import { AddMenuItemDialog } from "@/components/dashboard/menu/add-menu-item-dialog"
 import { useMenu } from "@/contexts/menu-context"
 import { useToast } from "@/hooks/use-toast"
+import { debounce } from "lodash"
+
+// Typen für bessere TypeScript-Unterstützung
+type ViewType = "grid" | "table"
+type TabType = "all" | "featured" | "unavailable"
+type SortKey = "name" | "price" | "category"
+type SortDirection = "asc" | "desc"
+
+interface SortConfig {
+  key: SortKey
+  direction: SortDirection
+}
+
+interface Filters {
+  dietary: {
+    vegetarian: boolean
+    vegan: boolean
+    glutenFree: boolean
+  }
+  availability: {
+    available: boolean
+    unavailable: boolean
+  }
+}
 
 export default function MenuPage() {
   const { menuItems, categories } = useMenu()
   const { toast } = useToast()
-  const [view, setView] = useState<"grid" | "table">("grid")
+
+  // State Management
+  const [view, setView] = useState<ViewType>("grid")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
-  const [activeTab, setActiveTab] = useState<"all" | "featured" | "unavailable">("all")
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null)
-  const [filters, setFilters] = useState({
+  const [activeTab, setActiveTab] = useState<TabType>("all")
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const [filters, setFilters] = useState<Filters>({
     dietary: {
       vegetarian: false,
       vegan: false,
@@ -43,60 +74,66 @@ export default function MenuPage() {
     },
   })
 
-  // Filtern der Menüelemente basierend auf den aktuellen Filtern und der ausgewählten Kategorie
+  // Debounced Search für bessere Performance
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((query: string) => {
+        startTransition(() => {
+          setSearchQuery(query)
+        })
+      }, 300),
+    [],
+  )
+
+  // Optimierte Filterlogik mit useMemo
   const filteredItems = useMemo(() => {
-    return menuItems
-      .filter((item) => {
-        // Kategorie-Filter
-        if (selectedCategory !== "all" && item.category !== selectedCategory) {
-          return false
-        }
+    let items = menuItems
 
-        // Suche
-        if (
-          searchQuery &&
-          !item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        ) {
-          return false
-        }
+    // Kategorie-Filter
+    if (selectedCategory !== "all") {
+      items = items.filter((item) => item.category === selectedCategory)
+    }
 
-        // Diät-Optionen
-        if (filters.dietary.vegetarian && !item.vegetarian) {
-          return false
-        }
-        if (filters.dietary.vegan && !item.vegan) {
-          return false
-        }
-        if (filters.dietary.glutenFree && !item.glutenFree) {
-          return false
-        }
+    // Suche
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      items = items.filter(
+        (item) => item.name.toLowerCase().includes(query) || item.description?.toLowerCase().includes(query),
+      )
+    }
 
-        // Verfügbarkeit
-        if (item.available && !filters.availability.available) {
-          return false
-        }
-        if (!item.available && !filters.availability.unavailable) {
-          return false
-        }
+    // Diät-Filter
+    if (filters.dietary.vegetarian) {
+      items = items.filter((item) => item.vegetarian)
+    }
+    if (filters.dietary.vegan) {
+      items = items.filter((item) => item.vegan)
+    }
+    if (filters.dietary.glutenFree) {
+      items = items.filter((item) => item.glutenFree)
+    }
 
-        // Tab-Filter
-        if (activeTab === "featured" && !item.featured) {
-          return false
-        }
-        if (activeTab === "unavailable" && item.available) {
-          return false
-        }
+    // Verfügbarkeits-Filter
+    items = items.filter((item) => {
+      if (item.available && !filters.availability.available) return false
+      if (!item.available && !filters.availability.unavailable) return false
+      return true
+    })
 
-        return true
-      })
-      .sort((a, b) => {
-        if (!sortConfig) return 0
+    // Tab-Filter
+    if (activeTab === "featured") {
+      items = items.filter((item) => item.featured)
+    } else if (activeTab === "unavailable") {
+      items = items.filter((item) => !item.available)
+    }
 
-        let aValue = a[sortConfig.key as keyof typeof a]
-        let bValue = b[sortConfig.key as keyof typeof b]
+    // Sortierung
+    if (sortConfig) {
+      items = [...items].sort((a, b) => {
+        let aValue: any = a[sortConfig.key]
+        let bValue: any = b[sortConfig.key]
 
-        // Spezialfall für Kategorie (Name statt ID anzeigen)
+        // Spezialfall für Kategorie
         if (sortConfig.key === "category") {
           const categoryA = categories.find((c) => c.id === a.category)
           const categoryB = categories.find((c) => c.id === b.category)
@@ -114,49 +151,79 @@ export default function MenuPage() {
 
         return 0
       })
+    }
+
+    return items
   }, [menuItems, selectedCategory, searchQuery, filters, activeTab, sortConfig, categories])
 
-  // Handler für die Kategorieauswahl
+  // Optimierte Handler mit useCallback
   const handleCategorySelect = useCallback((categoryId: string) => {
-    setSelectedCategory(categoryId)
-  }, [])
-
-  // Handler für die Sortierung
-  const handleSort = useCallback((key: string) => {
-    setSortConfig((prevConfig) => {
-      if (prevConfig?.key === key) {
-        return {
-          key,
-          direction: prevConfig.direction === "asc" ? "desc" : "asc",
-        }
-      }
-      return { key, direction: "asc" }
+    startTransition(() => {
+      setSelectedCategory(categoryId)
     })
   }, [])
 
-  // Handler für den Filter-Toggle
-  const toggleFilter = useCallback((type: "dietary" | "availability", key: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [key]: !prev[type][key as keyof (typeof prev)[type]],
-      },
-    }))
+  const handleSort = useCallback((key: SortKey) => {
+    startTransition(() => {
+      setSortConfig((prevConfig) => {
+        if (prevConfig?.key === key) {
+          return {
+            key,
+            direction: prevConfig.direction === "asc" ? "desc" : "asc",
+          }
+        }
+        return { key, direction: "asc" }
+      })
+    })
   }, [])
 
-  // Exportieren der Menüdaten
-  const handleExport = useCallback(() => {
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+      debouncedSearch(value)
+    },
+    [debouncedSearch],
+  )
+
+  const toggleDietaryFilter = useCallback((key: keyof Filters["dietary"]) => {
+    startTransition(() => {
+      setFilters((prev) => ({
+        ...prev,
+        dietary: {
+          ...prev.dietary,
+          [key]: !prev.dietary[key],
+        },
+      }))
+    })
+  }, [])
+
+  const toggleAvailabilityFilter = useCallback((key: keyof Filters["availability"]) => {
+    startTransition(() => {
+      setFilters((prev) => ({
+        ...prev,
+        availability: {
+          ...prev.availability,
+          [key]: !prev.availability[key],
+        },
+      }))
+    })
+  }, [])
+
+  // Optimierte Export/Import Funktionen
+  const handleExport = useCallback(async () => {
     try {
       const dataStr = JSON.stringify({ menuItems, categories }, null, 2)
-      const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
+      const blob = new Blob([dataStr], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
 
       const exportFileDefaultName = `menu-export-${new Date().toISOString().slice(0, 10)}.json`
 
       const linkElement = document.createElement("a")
-      linkElement.setAttribute("href", dataUri)
-      linkElement.setAttribute("download", exportFileDefaultName)
+      linkElement.href = url
+      linkElement.download = exportFileDefaultName
       linkElement.click()
+
+      URL.revokeObjectURL(url)
 
       toast({
         title: "Menü exportiert",
@@ -171,73 +238,101 @@ export default function MenuPage() {
     }
   }, [menuItems, categories, toast])
 
-  // Importieren von Menüdaten
   const handleImport = useCallback(() => {
     const input = document.createElement("input")
     input.type = "file"
     input.accept = ".json"
 
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
 
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        try {
-          const data = JSON.parse(event.target?.result as string)
+      try {
+        const text = await file.text()
+        const data = JSON.parse(text)
 
-          // Hier würde die Logik zum Importieren der Daten in den Kontext kommen
-          // Für dieses Beispiel zeigen wir nur eine Toast-Nachricht
-
-          toast({
-            title: "Menü importiert",
-            description: `${data.menuItems?.length || 0} Menüelemente und ${data.categories?.length || 0} Kategorien wurden importiert.`,
-          })
-        } catch (error) {
-          toast({
-            title: "Import fehlgeschlagen",
-            description: "Die Datei enthält kein gültiges Menü-Format.",
-            variant: "destructive",
-          })
+        if (!data.menuItems || !Array.isArray(data.menuItems)) {
+          throw new Error("Ungültiges Datenformat")
         }
+
+        toast({
+          title: "Menü importiert",
+          description: `${data.menuItems?.length || 0} Menüelemente und ${data.categories?.length || 0} Kategorien wurden importiert.`,
+        })
+      } catch (error) {
+        toast({
+          title: "Import fehlgeschlagen",
+          description: "Die Datei enthält kein gültiges Menü-Format.",
+          variant: "destructive",
+        })
       }
-      reader.readAsText(file)
     }
 
     input.click()
   }, [toast])
 
-  // Zählen der aktiven Filter
-  const activeFilterCount = Object.values(filters.dietary).filter(Boolean).length
+  // Berechnete Werte
+  const activeFilterCount = useMemo(() => Object.values(filters.dietary).filter(Boolean).length, [filters.dietary])
 
-  // Anzahl der gefilterten Elemente
   const filteredCount = filteredItems.length
   const totalCount = menuItems.length
 
+  // Keyboard Shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case "n":
+            e.preventDefault()
+            setShowAddDialog(true)
+            break
+          case "e":
+            e.preventDefault()
+            handleExport()
+            break
+          case "i":
+            e.preventDefault()
+            handleImport()
+            break
+        }
+      }
+    },
+    [handleExport, handleImport],
+  )
+
+  // Event Listener für Keyboard Shortcuts
+  React.useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [handleKeyDown])
+
   return (
     <div className="space-y-6">
-      {/* Header mit Aktionen */}
+      {/* Optimierter Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Menü-Verwaltung</h1>
-          <p className="text-muted-foreground mt-1">Verwalten Sie Ihre Menüelemente und Kategorien</p>
+          <p className="text-muted-foreground mt-1">
+            Verwalten Sie Ihre Menüelemente und Kategorien
+            {isPending && <Loader2 className="inline ml-2 h-4 w-4 animate-spin" />}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
-                Exportieren/Importieren
+                Export/Import
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                Menü exportieren
+                Menü exportieren (Ctrl+E)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleImport}>
                 <Upload className="h-4 w-4 mr-2" />
-                Menü importieren
+                Menü importieren (Ctrl+I)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -251,7 +346,7 @@ export default function MenuPage() {
 
       {/* Hauptinhalt */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Linke Spalte - Kategorien */}
+        {/* Kategorien Sidebar */}
         <div className="lg:col-span-1">
           <Card>
             <CardContent className="p-4">
@@ -260,9 +355,9 @@ export default function MenuPage() {
           </Card>
         </div>
 
-        {/* Rechte Spalte - Menüelemente */}
+        {/* Hauptbereich */}
         <div className="lg:col-span-3 space-y-4">
-          {/* Filter und Suche */}
+          {/* Optimierte Filter-Leiste */}
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row gap-3">
@@ -270,14 +365,14 @@ export default function MenuPage() {
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Gericht suchen..."
+                    placeholder="Gericht suchen... (Ctrl+K)"
                     className="pl-8"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                   />
                 </div>
 
                 <div className="flex gap-2">
+                  {/* Verbessertes Filter-Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-10">
@@ -291,94 +386,54 @@ export default function MenuPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem className="font-semibold" disabled>
-                        Diät-Optionen
-                      </DropdownMenuItem>
+                      <div className="px-2 py-1.5 text-sm font-semibold">Diät-Optionen</div>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <div className="flex items-center w-full">
-                          <input
-                            type="checkbox"
-                            id="filter-vegetarian"
-                            checked={filters.dietary.vegetarian}
-                            onChange={() => toggleFilter("dietary", "vegetarian")}
-                            className="mr-2"
-                          />
-                          <label htmlFor="filter-vegetarian" className="flex-1 cursor-pointer">
-                            Vegetarisch
-                          </label>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <div className="flex items-center w-full">
-                          <input
-                            type="checkbox"
-                            id="filter-vegan"
-                            checked={filters.dietary.vegan}
-                            onChange={() => toggleFilter("dietary", "vegan")}
-                            className="mr-2"
-                          />
-                          <label htmlFor="filter-vegan" className="flex-1 cursor-pointer">
-                            Vegan
-                          </label>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <div className="flex items-center w-full">
-                          <input
-                            type="checkbox"
-                            id="filter-glutenFree"
-                            checked={filters.dietary.glutenFree}
-                            onChange={() => toggleFilter("dietary", "glutenFree")}
-                            className="mr-2"
-                          />
-                          <label htmlFor="filter-glutenFree" className="flex-1 cursor-pointer">
-                            Glutenfrei
-                          </label>
-                        </div>
-                      </DropdownMenuItem>
+                      <DropdownMenuCheckboxItem
+                        checked={filters.dietary.vegetarian}
+                        onCheckedChange={() => toggleDietaryFilter("vegetarian")}
+                      >
+                        Vegetarisch
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={filters.dietary.vegan}
+                        onCheckedChange={() => toggleDietaryFilter("vegan")}
+                      >
+                        Vegan
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={filters.dietary.glutenFree}
+                        onCheckedChange={() => toggleDietaryFilter("glutenFree")}
+                      >
+                        Glutenfrei
+                      </DropdownMenuCheckboxItem>
 
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="font-semibold" disabled>
-                        Verfügbarkeit
-                      </DropdownMenuItem>
+                      <div className="px-2 py-1.5 text-sm font-semibold">Verfügbarkeit</div>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <div className="flex items-center w-full">
-                          <input
-                            type="checkbox"
-                            id="filter-available"
-                            checked={filters.availability.available}
-                            onChange={() => toggleFilter("availability", "available")}
-                            className="mr-2"
-                          />
-                          <label htmlFor="filter-available" className="flex-1 cursor-pointer">
-                            Verfügbar
-                          </label>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <div className="flex items-center w-full">
-                          <input
-                            type="checkbox"
-                            id="filter-unavailable"
-                            checked={filters.availability.unavailable}
-                            onChange={() => toggleFilter("availability", "unavailable")}
-                            className="mr-2"
-                          />
-                          <label htmlFor="filter-unavailable" className="flex-1 cursor-pointer">
-                            Nicht verfügbar
-                          </label>
-                        </div>
-                      </DropdownMenuItem>
+                      <DropdownMenuCheckboxItem
+                        checked={filters.availability.available}
+                        onCheckedChange={() => toggleAvailabilityFilter("available")}
+                      >
+                        Verfügbar
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={filters.availability.unavailable}
+                        onCheckedChange={() => toggleAvailabilityFilter("unavailable")}
+                      >
+                        Nicht verfügbar
+                      </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
 
+                  {/* Sortier-Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-10">
                         <ArrowUpDown className="h-4 w-4 mr-2" />
                         Sortieren
+                        {sortConfig && (
+                          <span className="ml-1 text-xs">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                        )}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -394,6 +449,7 @@ export default function MenuPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
 
+                  {/* View Toggle */}
                   <div className="flex border rounded-md overflow-hidden">
                     <Button
                       variant={view === "grid" ? "default" : "ghost"}
@@ -418,15 +474,10 @@ export default function MenuPage() {
             </CardContent>
           </Card>
 
-          {/* Tabs und Menüelemente */}
+          {/* Menüelemente mit Tabs */}
           <Card>
             <CardContent className="p-4">
-              <Tabs
-                defaultValue="all"
-                value={activeTab}
-                onValueChange={(value) => setActiveTab(value as "all" | "featured" | "unavailable")}
-                className="w-full"
-              >
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="w-full">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-medium">Menüelemente</h3>
@@ -470,7 +521,7 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* Dialog zum Hinzufügen eines Menüelements */}
+      {/* Dialog */}
       <AddMenuItemDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </div>
   )

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,6 +19,8 @@ import { Switch } from "@/components/ui/switch"
 import { QRCode } from "react-qr-code"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ColorPicker } from "@/components/dashboard/qr-codes/color-picker"
+import { useQRCodes } from "@/contexts/qr-codes-context"
+import { toast } from "@/hooks/use-toast"
 
 interface CreateQrCodeDialogProps {
   open: boolean
@@ -26,29 +28,70 @@ interface CreateQrCodeDialogProps {
 }
 
 export function CreateQrCodeDialog({ open, onOpenChange }: CreateQrCodeDialogProps) {
+  const { addQRCode } = useQRCodes()
   const [tableNumber, setTableNumber] = useState("")
   const [tableName, setTableName] = useState("")
   const [description, setDescription] = useState("Scannen Sie den QR-Code, um unser digitales Menü zu öffnen")
-  const [url, setUrl] = useState("https://restaurant.example.com/menu")
+  const [url, setUrl] = useState("/menu-example?tisch=")
   const [isActive, setIsActive] = useState(true)
   const [logoEnabled, setLogoEnabled] = useState(false)
   const [qrColor, setQrColor] = useState("#000000")
   const [bgColor, setBgColor] = useState("#FFFFFF")
 
+  useEffect(() => {
+    if (tableNumber) {
+      setUrl(`/menu-example?tisch=${tableNumber}`)
+    } else {
+      setUrl("/menu-example?tisch=")
+    }
+  }, [tableNumber])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log({
+
+    if (!tableNumber) {
+      toast({
+        title: "Fehler",
+        description: "Bitte geben Sie eine Tischnummer ein.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Add the new QR code
+    addQRCode({
       tableNumber,
       tableName,
       description,
       url,
-      isActive,
-      logoEnabled,
+      active: isActive,
       qrColor,
       bgColor,
+      logoEnabled,
     })
+
+    toast({
+      title: "QR-Code erstellt",
+      description: `QR-Code für Tisch ${tableNumber} wurde erfolgreich erstellt.`,
+    })
+
+    // Reset form
+    setTableNumber("")
+    setTableName("")
+    setDescription("Scannen Sie den QR-Code, um unser digitales Menü zu öffnen")
+    setUrl("/menu-example?tisch=")
+    setIsActive(true)
+    setLogoEnabled(false)
+    setQrColor("#000000")
+    setBgColor("#FFFFFF")
+
     onOpenChange(false)
+  }
+
+  const handleTestUrl = () => {
+    if (url && tableNumber) {
+      window.open(url, "_blank")
+    }
   }
 
   return (
@@ -111,13 +154,19 @@ export function CreateQrCodeDialog({ open, onOpenChange }: CreateQrCodeDialogPro
 
               <div className="grid gap-2">
                 <Label htmlFor="url">Ziel-URL*</Label>
-                <Input
-                  id="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.com/menu"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="/menu-example?tisch=1"
+                    required
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" onClick={handleTestUrl} disabled={!tableNumber}>
+                    Testen
+                  </Button>
+                </div>
                 <p className="text-xs text-[#6B7280]">
                   Dies ist die URL, zu der Benutzer weitergeleitet werden, wenn sie den QR-Code scannen.
                 </p>
@@ -163,17 +212,13 @@ export function CreateQrCodeDialog({ open, onOpenChange }: CreateQrCodeDialogPro
             <TabsContent value="preview" className="mt-4">
               <div className="flex flex-col items-center justify-center p-6 border border-[#EAEAEA] rounded-lg">
                 <div className="p-4 bg-white border border-[#EAEAEA] rounded-lg shadow-sm mb-4">
-                  <QRCode
-                    value={url || "https://restaurant.example.com/menu"}
-                    size={200}
-                    fgColor={qrColor}
-                    bgColor={bgColor}
-                  />
+                  <QRCode value={url || "/menu-example?tisch=1"} size={200} fgColor={qrColor} bgColor={bgColor} />
                 </div>
                 <h3 className="text-lg font-medium">
                   {tableName || tableNumber ? `Tisch ${tableNumber}` : "Tisch Vorschau"}
                 </h3>
-                <p className="text-sm text-[#6B7280] text-center mt-1">{description}</p>
+                <p className="text-sm text-[#6B7280] text-center mt-1 mb-2">{description}</p>
+                <p className="text-xs text-[#9CA3AF] text-center font-mono">{url}</p>
               </div>
             </TabsContent>
           </Tabs>

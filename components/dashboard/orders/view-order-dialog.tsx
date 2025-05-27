@@ -20,6 +20,9 @@ import {
   MapPin,
 } from "lucide-react"
 import { orders } from "@/data/orders"
+import { EditOrderDialog } from "./edit-order-dialog"
+import { useToast } from "@/hooks/use-toast"
+import { useOrders } from "@/contexts/orders-context"
 
 interface ViewOrderDialogProps {
   orderId: string
@@ -29,7 +32,10 @@ interface ViewOrderDialogProps {
 
 export function ViewOrderDialog({ orderId, open, onOpenChange }: ViewOrderDialogProps) {
   const router = useRouter()
+  const { toast } = useToast()
+  const { updateOrder } = useOrders()
   const [activeTab, setActiveTab] = useState("details")
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   const order = orders.find((o) => o.id === orderId)
 
@@ -253,21 +259,51 @@ export function ViewOrderDialog({ orderId, open, onOpenChange }: ViewOrderDialog
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {order.status === "new" && (
-                  <Button variant="outline" className="justify-start">
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    onClick={() => {
+                      updateOrder(orderId, { status: "in-progress" })
+                      toast({
+                        title: "Status aktualisiert",
+                        description: "Bestellung wurde auf 'In Bearbeitung' gesetzt.",
+                      })
+                    }}
+                  >
                     <Clock className="mr-2 h-4 w-4 text-amber-500" />
                     In Bearbeitung setzen
                   </Button>
                 )}
 
                 {(order.status === "new" || order.status === "in-progress") && (
-                  <Button variant="outline" className="justify-start">
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    onClick={() => {
+                      updateOrder(orderId, { status: "completed" })
+                      toast({
+                        title: "Status aktualisiert",
+                        description: "Bestellung wurde als abgeschlossen markiert.",
+                      })
+                    }}
+                  >
                     <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
                     Als abgeschlossen markieren
                   </Button>
                 )}
 
                 {order.status !== "cancelled" && (
-                  <Button variant="outline" className="justify-start text-red-500 border-red-200 hover:bg-red-50">
+                  <Button
+                    variant="outline"
+                    className="justify-start text-red-500 border-red-200 hover:bg-red-50"
+                    onClick={() => {
+                      updateOrder(orderId, { status: "cancelled" })
+                      toast({
+                        title: "Bestellung storniert",
+                        description: "Bestellung wurde erfolgreich storniert.",
+                      })
+                    }}
+                  >
                     <XCircle className="mr-2 h-4 w-4" />
                     Bestellung stornieren
                   </Button>
@@ -302,7 +338,13 @@ export function ViewOrderDialog({ orderId, open, onOpenChange }: ViewOrderDialog
                         Das Bearbeiten einer Bestellung kann Auswirkungen auf die Küche und Abrechnung haben. Bitte nur
                         bei Bedarf durchführen.
                       </p>
-                      <Button size="sm" variant="outline" className="mt-2 h-8 text-xs bg-white">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 h-8 text-xs bg-white"
+                        onClick={() => setShowEditDialog(true)}
+                        disabled={order.status === "completed" || order.status === "cancelled"}
+                      >
                         Bestellung bearbeiten
                       </Button>
                     </div>
@@ -319,6 +361,7 @@ export function ViewOrderDialog({ orderId, open, onOpenChange }: ViewOrderDialog
           </Button>
         </DialogFooter>
       </DialogContent>
+      <EditOrderDialog order={order} open={showEditDialog} onOpenChange={setShowEditDialog} />
     </Dialog>
   )
 }

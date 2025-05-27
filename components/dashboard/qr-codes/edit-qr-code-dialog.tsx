@@ -19,50 +19,80 @@ import { Switch } from "@/components/ui/switch"
 import { QRCode } from "react-qr-code"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ColorPicker } from "@/components/dashboard/qr-codes/color-picker"
-import type { qrCodes } from "@/data/qr-codes"
+import { useQRCodes, type QRCodeData } from "@/contexts/qr-codes-context"
+import { useToast } from "@/hooks/use-toast"
 
 interface EditQrCodeDialogProps {
-  qrCode: (typeof qrCodes)[0]
+  qrCode: QRCodeData
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function EditQrCodeDialog({ qrCode, open, onOpenChange }: EditQrCodeDialogProps) {
-  const [tableNumber, setTableNumber] = useState(qrCode.tableNumber)
-  const [tableName, setTableName] = useState(qrCode.tableName || "")
-  const [description, setDescription] = useState(qrCode.description || "")
-  const [url, setUrl] = useState(qrCode.url)
-  const [isActive, setIsActive] = useState(qrCode.active)
-  const [logoEnabled, setLogoEnabled] = useState(qrCode.logoEnabled || false)
-  const [qrColor, setQrColor] = useState(qrCode.qrColor || "#000000")
-  const [bgColor, setBgColor] = useState(qrCode.bgColor || "#FFFFFF")
+  const { updateQRCode } = useQRCodes()
+  const { toast } = useToast()
 
-  // Update form when qrCode changes
+  const [tableNumber, setTableNumber] = useState("")
+  const [tableName, setTableName] = useState("")
+  const [description, setDescription] = useState("")
+  const [url, setUrl] = useState("")
+  const [isActive, setIsActive] = useState(true)
+  const [logoEnabled, setLogoEnabled] = useState(false)
+  const [qrColor, setQrColor] = useState("#000000")
+  const [bgColor, setBgColor] = useState("#FFFFFF")
+
+  // Initialize form when dialog opens or qrCode changes
   useEffect(() => {
-    setTableNumber(qrCode.tableNumber)
-    setTableName(qrCode.tableName || "")
-    setDescription(qrCode.description || "")
-    setUrl(qrCode.url)
-    setIsActive(qrCode.active)
-    setLogoEnabled(qrCode.logoEnabled || false)
-    setQrColor(qrCode.qrColor || "#000000")
-    setBgColor(qrCode.bgColor || "#FFFFFF")
-  }, [qrCode])
+    if (open && qrCode) {
+      setTableNumber(qrCode.tableNumber)
+      setTableName(qrCode.tableName || "")
+      setDescription(qrCode.description || "")
+      setUrl(qrCode.url)
+      setIsActive(qrCode.active)
+      setLogoEnabled(qrCode.logoEnabled || false)
+      setQrColor(qrCode.qrColor || "#000000")
+      setBgColor(qrCode.bgColor || "#FFFFFF")
+    }
+  }, [open, qrCode])
+
+  // Update URL when table number changes
+  useEffect(() => {
+    if (tableNumber && open) {
+      setUrl(`/menu-example?tisch=${tableNumber}`)
+    }
+  }, [tableNumber, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log({
-      id: qrCode.id,
-      tableNumber,
-      tableName,
-      description,
-      url,
-      active: isActive,
-      logoEnabled,
-      qrColor,
-      bgColor,
-    })
+
+    try {
+      updateQRCode(qrCode.id, {
+        tableNumber,
+        tableName,
+        description,
+        url,
+        active: isActive,
+        logoEnabled,
+        qrColor,
+        bgColor,
+      })
+
+      toast({
+        title: "QR-Code aktualisiert",
+        description: `QR-Code für ${tableName || `Tisch ${tableNumber}`} wurde erfolgreich aktualisiert.`,
+      })
+
+      onOpenChange(false)
+    } catch (error) {
+      toast({
+        title: "Fehler",
+        description: "QR-Code konnte nicht aktualisiert werden.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCancel = () => {
     onOpenChange(false)
   }
 
@@ -176,7 +206,7 @@ export function EditQrCodeDialog({ qrCode, open, onOpenChange }: EditQrCodeDialo
           </Tabs>
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               Abbrechen
             </Button>
             <Button type="submit">Änderungen speichern</Button>

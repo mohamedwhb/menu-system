@@ -1,6 +1,8 @@
 import type React from "react"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { TopBar } from "@/components/dashboard/top-bar"
+import { NotificationsProvider } from "@/contexts/notifications-context"
+import { FinanzOnlineProvider } from "@/contexts/finanzonline-context"
 
 export default function DashboardLayout({
   children,
@@ -8,12 +10,16 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex h-screen bg-white text-[#1F1F1F]">
-      <DashboardSidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
-    </div>
+    <FinanzOnlineProvider>
+      <NotificationsProvider>
+        <div className="flex h-screen bg-gray-50">
+          <DashboardSidebar />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <TopBar />
+            <main className="flex-1 overflow-auto p-6">{children}</main>
+          </div>
+        </div>
+      </NotificationsProvider>
+    </FinanzOnlineProvider>
   )
 }

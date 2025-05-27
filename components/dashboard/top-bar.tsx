@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, LogOut, Menu, User, Settings, CreditCard } from "lucide-react"
+import { LogOut, Menu, User, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,9 +13,12 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { NotificationsDropdown } from "@/components/dashboard/notifications/notifications-dropdown"
+import { useRouter } from "next/navigation"
 
 export function TopBar() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const router = useRouter()
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center bg-white border-b border-[#EAEAEA] px-4 md:px-6">
@@ -30,11 +33,7 @@ export function TopBar() {
       </Button>
 
       <div className="ml-auto flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="relative text-[#1F1F1F]">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#006AFF]"></span>
-          <span className="sr-only">Notifications</span>
-        </Button>
+        <NotificationsDropdown />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -55,17 +54,19 @@ export function TopBar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer flex items-center">
+              <DropdownMenuItem
+                className="cursor-pointer flex items-center"
+                onClick={() => router.push("/dashboard/profile")}
+              >
                 <User className="mr-2 h-4 w-4" />
                 <span>Profil</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer flex items-center">
+              <DropdownMenuItem
+                className="cursor-pointer flex items-center"
+                onClick={() => router.push("/dashboard/settings")}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Einstellungen</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer flex items-center">
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>Abrechnung</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
